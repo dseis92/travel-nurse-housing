@@ -1,206 +1,247 @@
-import { useState, type FormEvent } from 'react'
-import { supabase } from './lib/supabaseClient'
-import type { ListingRow } from './types'
+import React, { useState } from 'react'
+import type { FormEvent } from 'react'
+import { supabase } from './supabaseClient'
+import { NeumoCard } from './neumo/NeumoKit'
 
 type BookingModalProps = {
-  listing: ListingRow
+  open: boolean
   onClose: () => void
+  listing: {
+    id: number
+    title: string
+    city?: string
+    state?: string
+  }
 }
 
-export function BookingModal({ listing, onClose }: BookingModalProps) {
+export const BookingModal: React.FC<BookingModalProps> = ({
+  open,
+  onClose,
+  listing,
+}) => {
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [note, setNote] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: FormEvent) => {
+  if (!open) return null
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (loading || success) return
 
-    setLoading(true)
-    setError(null)
-
-    if (!guestEmail || !startDate || !endDate) {
-      setError('Email and dates are required.')
-      setLoading(false)
+    if (!startDate || !endDate) {
+      alert('Please choose both a start and end date.')
       return
     }
 
-    const { error } = await supabase.from('bookings').insert([
-      {
-        listing_id: listing.id,
-        guest_name: guestName || null,
-        guest_email: guestEmail,
-        guest_phone: guestPhone || null,
-        start_date: startDate,
-        end_date: endDate,
-        // note is currently just for host context; not stored in DB yet
-      },
-    ])
+    try {
+      setIsSubmitting(true)
 
-    if (error) {
-      console.error(error)
-      setError('Could not submit request. Please try again.')
-      setLoading(false)
-      return
+      const { error } = await supabase.from('bookings').insert([
+        {
+          listing_id: listing.id,
+          guest_name: guestName || null,
+          guest_email: guestEmail || null,
+          guest_phone: guestPhone || null,
+          start_date: startDate,
+          end_date: endDate,
+          status: 'pending',
+          // keep notes next to the booking for now; column is optional
+          notes: notes || null,
+        },
+      ])
+
+      if (error) {
+        console.error('Supabase booking insert error:', error)
+        alert(`Could not send request:\n\n${error.message}`)
+        setIsSubmitting(false)
+        return
+      }
+
+      alert('Request sent! The host will review your stay.')
+      setIsSubmitting(false)
+      onClose()
+    } catch (err: any) {
+      console.error('Unexpected booking error:', err)
+      alert(
+        `Could not send request:\n\n${
+          err?.message || 'Unexpected error, check console.'
+        }`,
+      )
+      setIsSubmitting(false)
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm px-4">
-      <div className="max-w-lg w-full rounded-2xl bg-slate-950 border border-slate-800 shadow-xl shadow-slate-950/70 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-sky-400">
-              Request to book
-            </p>
-            <h2 className="text-sm font-semibold text-slate-50">
-              {listing.title}
-            </h2>
-            <p className="text-[11px] text-slate-400">
-              {listing.city}, {listing.state} • {listing.hospital_name}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs text-slate-400 hover:text-slate-100"
+    <div
+      className="nm-shell"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 40,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background:
+          'linear-gradient(145deg, rgba(234,243,255,0.95), rgba(227,212,255,0.96))',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 420,
+          width: '100%',
+        }}
+      >
+        <NeumoCard className="nm-fade-in" style={{ padding: 18 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: 8,
+              marginBottom: 12,
+            }}
           >
-            ✕
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-4 py-4 space-y-3">
-          {error && (
-            <div className="text-xs text-rose-400 bg-rose-950/40 border border-rose-700/70 rounded-xl px-3 py-2">
-              {error}
-            </div>
-          )}
-
-          {success ? (
-            <div className="space-y-3">
-              <div className="text-xs text-emerald-400 bg-emerald-950/40 border border-emerald-700/70 rounded-xl px-3 py-2">
-                Booking request sent. The host will reach out to you by email or
-                phone to confirm details.
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full text-xs px-3 py-2 rounded-xl border border-slate-700 text-slate-100 hover:border-sky-500 hover:text-sky-300 transition"
+            <div>
+              <h2
+                className="nm-heading-lg"
+                style={{ fontSize: 18, marginBottom: 4 }}
               >
-                Close
+                Request stay
+              </h2>
+              <p className="nm-body" style={{ fontSize: 12 }}>
+                {listing.title}
+                {listing.city && listing.state
+                  ? ` · ${listing.city}, ${listing.state}`
+                  : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="nm-pill"
+              style={{ fontSize: 11 }}
+              onClick={onClose}
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div className="nm-field-group" style={{ flex: 1, minWidth: 0 }}>
+                <label className="nm-label">Your name</label>
+                <input
+                  className="nm-input"
+                  placeholder="Optional"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+              </div>
+              <div className="nm-field-group" style={{ flex: 1, minWidth: 0 }}>
+                <label className="nm-label">Email</label>
+                <input
+                  className="nm-input"
+                  placeholder="Optional"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div className="nm-field-group" style={{ flex: 1, minWidth: 0 }}>
+                <label className="nm-label">Phone</label>
+                <input
+                  className="nm-input"
+                  placeholder="Optional"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div className="nm-field-group" style={{ flex: 1, minWidth: 0 }}>
+                <label className="nm-label">Contract start</label>
+                <input
+                  type="date"
+                  className="nm-input"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="nm-field-group" style={{ flex: 1, minWidth: 0 }}>
+                <label className="nm-label">Contract end</label>
+                <input
+                  type="date"
+                  className="nm-input"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="nm-field-group">
+              <label className="nm-label">Anything the host should know?</label>
+              <textarea
+                className="nm-input"
+                rows={3}
+                placeholder="Night shift? Traveling with a pet? Share details here."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 6,
+                gap: 8,
+              }}
+            >
+              <p className="nm-body" style={{ fontSize: 11, maxWidth: 220 }}>
+                Your contact info is shared securely with the host only if they
+                approve your request.
+              </p>
+              <button
+                type="submit"
+                className="nm-pill nm-pill--active"
+                style={{ fontSize: 13, minWidth: 120, textAlign: 'center' }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending…' : 'Request stay'}
               </button>
             </div>
-          ) : (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium text-slate-300">
-                    Your name
-                  </label>
-                  <input
-                    type="text"
-                    value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
-                    placeholder="Jane Doe, RN"
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">
-                    Email (for host to reply)
-                  </label>
-                  <input
-                    required
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">
-                    Phone (optional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={guestPhone}
-                    onChange={(e) => setGuestPhone(e.target.value)}
-                    placeholder="(555) 555-5555"
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">
-                    Contract start
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-300">
-                    Contract end
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium text-slate-300">
-                    Anything the host should know?
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Shift type, pets, parking needs, ideal move-in date, etc."
-                    className="w-full rounded-xl bg-slate-950/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-2 gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-xs px-3 py-2 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-slate-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="text-xs px-4 py-2 rounded-xl bg-sky-500 text-slate-950 font-medium shadow-sm shadow-sky-900/40 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-                  {loading ? 'Sending…' : 'Send booking request'}
-                </button>
-              </div>
-            </>
-          )}
-        </form>
+          </form>
+        </NeumoCard>
       </div>
     </div>
   )

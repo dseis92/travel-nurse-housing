@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { OnboardingFlow } from './onboarding/OnboardingFlow'
 import { NeumoCard, PillButton } from './neumo/NeumoKit'
 import { HostDashboard } from './HostDashboard'
+import { NurseLogin } from './NurseLogin'
+import { HostLogin } from './HostLogin'
 
 type RoomTypeFilter = 'any' | 'private-room' | 'entire-place' | 'shared'
 
@@ -33,12 +35,14 @@ type OnboardingPrefs = {
   maxDistance?: number
 }
 
-type UserRole = 'nurse' | 'host' | null
-type ResultsMode = 'all' | 'favorites'
+type Screen =
+  | 'home'
+  | 'login-choice'
+  | 'nurse-login'
+  | 'host-login'
+  | 'host-dashboard'
 
 const STORAGE_KEY = 'nightshift_onboarding'
-const ROLE_KEY = 'nightshift_role'
-const FAVORITES_KEY = 'nightshift_favorites'
 
 function loadOnboardingPrefs(): OnboardingPrefs | null {
   if (typeof window === 'undefined') return null
@@ -100,13 +104,12 @@ const LISTINGS: Listing[] = [
 ]
 
 const App: React.FC = () => {
-  const [role, setRole] = useState<UserRole>(null)
+  const [screen, setScreen] = useState<Screen>('home')
+  const [userRole, setUserRole] = useState<'nurse' | 'host' | null>(null)
 
-  // Nurse-side state
   const [activeCategory, setActiveCategory] = useState<
     'housing' | 'hospitals' | 'nurses'
   >('housing')
-  const [resultsMode, setResultsMode] = useState<ResultsMode>('all')
 
   const [prefs, setPrefs] = useState<OnboardingPrefs | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -117,114 +120,32 @@ const App: React.FC = () => {
   const [contractStart, setContractStart] = useState('')
   const [contractEnd, setContractEnd] = useState('')
 
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([])
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
-  // Bootstrap role + nurse prefs from localStorage
+  const [activeBottom, setActiveBottom] = useState<
+    'home' | 'search' | 'add' | 'saved' | 'profile'
+  >('home')
+
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const storedRole = (window.localStorage.getItem(ROLE_KEY) as UserRole) || null
-    if (!storedRole) return
+    const loaded = loadOnboardingPrefs()
+    if (!loaded) return
 
-    setRole(storedRole)
+    setPrefs(loaded)
 
-    if (storedRole === 'nurse') {
-      const loaded = loadOnboardingPrefs()
-      if (loaded) {
-        setPrefs(loaded)
-        if (loaded.assignmentLocation)
-          setHospitalOrCity(loaded.assignmentLocation)
-        if (typeof loaded.budget === 'number') setMaxBudget(loaded.budget)
-        if (loaded.startDate) setContractStart(loaded.startDate)
-        if (loaded.endDate) setContractEnd(loaded.endDate)
-        setRoomType(mapRoomTypeFromOnboarding(loaded.roomType))
-      }
-    }
+    if (loaded.assignmentLocation) setHospitalOrCity(loaded.assignmentLocation)
+    if (typeof loaded.budget === 'number') setMaxBudget(loaded.budget)
+    if (loaded.startDate) setContractStart(loaded.startDate)
+    if (loaded.endDate) setContractEnd(loaded.endDate)
+    setRoomType(mapRoomTypeFromOnboarding(loaded.roomType))
   }, [])
 
-  // Load favorites
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const raw = window.localStorage.getItem(FAVORITES_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) {
-        setFavoriteIds(parsed.filter((id) => typeof id === 'number'))
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  // Close onboarding overlay when you leave Nurses tab
+  // if you leave Nurses tab, close onboarding
   useEffect(() => {
     if (activeCategory !== 'nurses') {
       setShowOnboarding(false)
     }
   }, [activeCategory])
 
-  const persistRole = (nextRole: UserRole) => {
-    if (typeof window === 'undefined') return
-    if (nextRole) {
-      window.localStorage.setItem(ROLE_KEY, nextRole)
-    } else {
-      window.localStorage.removeItem(ROLE_KEY)
-    }
-  }
-
-  const persistFavorites = (ids: number[]) => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids))
-  }
-
-  const handleLogin = (nextRole: 'nurse' | 'host') => {
-    setRole(nextRole)
-    persistRole(nextRole)
-
-    if (nextRole === 'nurse') {
-      const loaded = loadOnboardingPrefs()
-      if (loaded) {
-        setPrefs(loaded)
-        if (loaded.assignmentLocation)
-          setHospitalOrCity(loaded.assignmentLocation)
-        if (typeof loaded.budget === 'number') setMaxBudget(loaded.budget)
-        if (loaded.startDate) setContractStart(loaded.startDate)
-        if (loaded.endDate) setContractEnd(loaded.endDate)
-        setRoomType(mapRoomTypeFromOnboarding(loaded.roomType))
-      } else {
-        // brand-new nurse → open onboarding
-        setActiveCategory('nurses')
-        setShowOnboarding(true)
-      }
-    }
-  }
-
-  const handleLogout = () => {
-    setRole(null)
-    setPrefs(null)
-    setShowOnboarding(false)
-    setHospitalOrCity('')
-    setMaxBudget(2000)
-    setRoomType('any')
-    setContractStart('')
-    setContractEnd('')
-    setActiveCategory('housing')
-    setResultsMode('all')
-    persistRole(null)
-  }
-
-  // Favorites
-  const handleToggleFavorite = (listingId: number) => {
-    setFavoriteIds((prev) => {
-      const exists = prev.includes(listingId)
-      const next = exists ? prev.filter((id) => id !== listingId) : [...prev, listingId]
-      persistFavorites(next)
-      return next
-    })
-  }
-
-  // Nurse filters + derived values
   const filteredListings = useMemo(() => {
     return LISTINGS.filter((listing) => {
       const matchesLocation =
@@ -244,34 +165,17 @@ const App: React.FC = () => {
     })
   }, [hospitalOrCity, maxBudget, roomType])
 
-  const visibleListings = useMemo(() => {
-    if (resultsMode === 'favorites') {
-      return filteredListings.filter((l) => favoriteIds.includes(l.id))
-    }
-    return filteredListings
-  }, [filteredListings, favoriteIds, resultsMode])
-
-  const listingCountText = useMemo(() => {
-    if (resultsMode === 'favorites') {
-      if (visibleListings.length === 0) {
-        return 'You haven’t saved any places yet.'
-      }
-      if (visibleListings.length === 1) {
-        return '1 saved place'
-      }
-      return `${visibleListings.length} saved places`
-    }
-
-    if (visibleListings.length === 0) {
-      return 'No places found yet — try widening your filters.'
-    }
-    if (visibleListings.length === 1) {
-      return '1 place that matches your filters'
-    }
-    return `${visibleListings.length} places that match your filters`
-  }, [visibleListings, resultsMode])
+  const listingCountText =
+    filteredListings.length === 0
+      ? 'No places found yet — try widening your filters.'
+      : filteredListings.length === 1
+      ? '1 place that matches your filters'
+      : `${filteredListings.length} places that match your filters`
 
   const handleSearchClick = () => {
+    if (screen !== 'home') {
+      setScreen('home')
+    }
     if (resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -294,458 +198,426 @@ const App: React.FC = () => {
     setShowOnboarding(false)
   }
 
-  // Bottom nav handlers (nurse app only)
-  const handleNavHome = () => {
-    if (role !== 'nurse') return
-    setActiveCategory('housing')
-    setShowOnboarding(false)
-    setResultsMode('all')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleNavSearchNav = () => {
-    if (role !== 'nurse') return
-    setActiveCategory('housing')
-    setShowOnboarding(false)
-    setResultsMode('all')
-    setTimeout(() => {
-      handleSearchClick()
-    }, 0)
-  }
-
-  const handleNavPlus = () => {
-    if (role !== 'nurse') return
+  // Login success handlers
+  const handleNurseLoginSuccess = (name: string) => {
+    setUserRole('nurse')
+    setPrefs((prev) => ({
+      ...(prev || {}),
+      name,
+    }))
+    setScreen('home')
     setActiveCategory('nurses')
-    setShowOnboarding(true)
   }
 
-  const handleNavFavorites = () => {
-    if (role !== 'nurse') return
+  const handleHostLoginSuccess = (hostName: string) => {
+    setUserRole('host')
+    setScreen('host-dashboard')
+  }
+
+  // Bottom nav handlers
+  const handleBottomHome = () => {
+    setScreen('home')
+    setActiveBottom('home')
     setActiveCategory('housing')
-    setShowOnboarding(false)
-    setResultsMode('favorites')
-    if (resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const handleBottomSearch = () => {
+    setScreen('home')
+    setActiveBottom('search')
+    setActiveCategory('housing')
+    handleSearchClick()
+  }
+
+  const handleBottomAdd = () => {
+    setActiveBottom('add')
+    if (userRole === 'host') {
+      setScreen('host-dashboard')
+    } else {
+      setScreen('home')
+      setActiveCategory('nurses')
+      setShowOnboarding(true)
     }
   }
 
-  const handleNavProfile = () => {
-    if (role !== 'nurse') return
-    setActiveCategory('nurses')
-    setShowOnboarding(false)
-    setResultsMode('all')
+  const handleBottomSaved = () => {
+    setActiveBottom('saved')
+    window.alert('Saved places coming soon ✨')
   }
 
-  /* ---------------- AUTH GATE ---------------- */
-
-  if (role === null) {
-    return <AuthScreen onLogin={handleLogin} />
+  const handleBottomProfile = () => {
+    setActiveBottom('profile')
+    if (!userRole) {
+      setScreen('login-choice')
+      return
+    }
+    if (userRole === 'host') {
+      setScreen('host-dashboard')
+    } else {
+      setScreen('home')
+      setActiveCategory('nurses')
+    }
   }
-
-  /* ---------------- HOST APP ---------------- */
-
-  if (role === 'host') {
-    return (
-      <div className="nm-shell">
-        <div className="nm-phone">
-          <main className="nm-screen-content nm-fade-in">
-            <NeumoCard>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 12,
-                  gap: 8,
-                }}
-              >
-                <h2 className="nm-heading-lg" style={{ fontSize: 18 }}>
-                  Host dashboard
-                </h2>
-                <button
-                  type="button"
-                  className="nm-pill"
-                  style={{ fontSize: 11 }}
-                  onClick={handleLogout}
-                >
-                  Switch account
-                </button>
-              </div>
-              <HostDashboard />
-            </NeumoCard>
-          </main>
-
-          <nav className="nm-bottom-nav">
-            <button className="nm-bottom-icon nm-bottom-icon--active" type="button">
-              🏠
-            </button>
-            <button className="nm-bottom-icon" type="button" disabled>
-              📦
-            </button>
-            <button className="nm-bottom-fab nm-bounce" type="button" disabled>
-              +
-            </button>
-            <button className="nm-bottom-icon" type="button" disabled>
-              📊
-            </button>
-            <button
-              className="nm-bottom-icon"
-              type="button"
-              onClick={handleLogout}
-            >
-              🚪
-            </button>
-          </nav>
-        </div>
-      </div>
-    )
-  }
-
-  /* ---------------- NURSE APP ---------------- */
 
   return (
     <div className="nm-shell">
       <div className="nm-phone">
         <main className="nm-screen-content nm-fade-in">
-          {/* HEADER: search pill + category tabs */}
-          <NeumoCard className="nm-explore-header">
-            <button
-              type="button"
-              className="nm-search-pill"
-              onClick={handleSearchClick}
-            >
-              <span className="nm-search-icon">🔍</span>
-              <div className="nm-search-text">
-                <span className="nm-search-title">Start your search</span>
-                <span className="nm-search-sub">
-                  Where&apos;s your next assignment?
-                </span>
-              </div>
-            </button>
-
-            <div className="nm-category-row">
-              <button
-                type="button"
-                className={
-                  'nm-category-item ' +
-                  (activeCategory === 'housing'
-                    ? 'nm-category-item--active'
-                    : '')
-                }
-                onClick={() => {
-                  setActiveCategory('housing')
-                  setResultsMode('all')
-                }}
-              >
-                <span className="nm-category-emoji">🏠</span>
-                <span className="nm-category-label">Housing</span>
-              </button>
-              <button
-                type="button"
-                className={
-                  'nm-category-item ' +
-                  (activeCategory === 'hospitals'
-                    ? 'nm-category-item--active'
-                    : '')
-                }
-                onClick={() => {
-                  setActiveCategory('hospitals')
-                  setResultsMode('all')
-                }}
-              >
-                <span className="nm-category-emoji">🏥</span>
-                <span className="nm-category-label">Hospitals</span>
-              </button>
-              <button
-                type="button"
-                className={
-                  'nm-category-item ' +
-                  (activeCategory === 'nurses'
-                    ? 'nm-category-item--active'
-                    : '')
-                }
-                onClick={() => {
-                  setActiveCategory('nurses')
-                  setResultsMode('all')
-                }}
-              >
-                <span className="nm-category-emoji">👩‍⚕️</span>
-                <span className="nm-category-label">Nurses</span>
-              </button>
-            </div>
-          </NeumoCard>
-
-          {activeCategory === 'nurses' ? (
-            <>
-              {showOnboarding ? (
-                <>
-                  <NeumoCard>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="nm-pill"
-                        style={{ fontSize: 12 }}
-                        onClick={closeOnboardingAndRefresh}
-                      >
-                        ← Back to profile
-                      </button>
-                      <button
-                        type="button"
-                        className="nm-pill nm-pill--active"
-                        style={{ fontSize: 12 }}
-                        onClick={closeOnboardingAndRefresh}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </NeumoCard>
-
-                  <div className="nm-onboarding-overlay">
-                    <NeumoCard className="nm-onboarding-panel">
-                      <OnboardingFlow />
-                    </NeumoCard>
-                  </div>
-                </>
-              ) : (
-                <NursesTab
-                  prefs={prefs}
-                  onEdit={() => setShowOnboarding(true)}
-                  onLogout={handleLogout}
-                />
-              )}
-            </>
+          {screen === 'login-choice' ? (
+            <RoleChoice
+              onNurse={() => setScreen('nurse-login')}
+              onHost={() => setScreen('host-login')}
+            />
+          ) : screen === 'nurse-login' ? (
+            <NurseLogin
+              onBack={() => setScreen('login-choice')}
+              onSuccess={handleNurseLoginSuccess}
+            />
+          ) : screen === 'host-login' ? (
+            <HostLogin
+              onBack={() => setScreen('login-choice')}
+              onSuccess={handleHostLoginSuccess}
+            />
+          ) : screen === 'host-dashboard' && userRole === 'host' ? (
+            <NeumoCard>
+              <HostDashboard />
+            </NeumoCard>
           ) : (
             <>
-              {/* FILTERS – only for Housing / Hospitals */}
-              {showFilters && (
-                <NeumoCard>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
+              {/* Nurse-facing home: header search + category tabs */}
+              <NeumoCard className="nm-explore-header">
+                <button
+                  type="button"
+                  className="nm-search-pill"
+                  onClick={handleSearchClick}
+                >
+                  <span className="nm-search-icon">🔍</span>
+                  <div className="nm-search-text">
+                    <span className="nm-search-title">Start your search</span>
+                    <span className="nm-search-sub">
+                      Where&apos;s your next assignment?
+                    </span>
+                  </div>
+                </button>
+
+                <div className="nm-category-row">
+                  <button
+                    type="button"
+                    className={
+                      'nm-category-item ' +
+                      (activeCategory === 'housing'
+                        ? 'nm-category-item--active'
+                        : '')
+                    }
+                    onClick={() => setActiveCategory('housing')}
                   >
-                    <div className="nm-field-group">
-                      <label className="nm-label">Hospital or city</label>
-                      <input
-                        className="nm-input"
-                        placeholder="e.g. Swedish Medical Center, Denver"
-                        value={hospitalOrCity}
-                        onChange={(e) => setHospitalOrCity(e.target.value)}
-                      />
-                    </div>
+                    <span className="nm-category-emoji">🏠</span>
+                    <span className="nm-category-label">Housing</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      'nm-category-item ' +
+                      (activeCategory === 'hospitals'
+                        ? 'nm-category-item--active'
+                        : '')
+                    }
+                    onClick={() => setActiveCategory('hospitals')}
+                  >
+                    <span className="nm-category-emoji">🏥</span>
+                    <span className="nm-category-label">Hospitals</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      'nm-category-item ' +
+                      (activeCategory === 'nurses'
+                        ? 'nm-category-item--active'
+                        : '')
+                    }
+                    onClick={() => setActiveCategory('nurses')}
+                  >
+                    <span className="nm-category-emoji">👩‍⚕️</span>
+                    <span className="nm-category-label">Nurses</span>
+                  </button>
+                </div>
+              </NeumoCard>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <div className="nm-field-group" style={{ flex: 1 }}>
-                        <label className="nm-label">Max monthly budget</label>
-                        <input
-                          className="nm-input"
-                          inputMode="numeric"
-                          value={maxBudget === '' ? '' : String(maxBudget)}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/[^\d]/g, '')
-                            setMaxBudget(v ? Number(v) : '')
-                          }}
-                        />
-                      </div>
-                      <div className="nm-field-group" style={{ flex: 1 }}>
-                        <label className="nm-label">Room type</label>
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 6,
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <PillButton
-                            label="Any"
-                            active={roomType === 'any'}
-                            onClick={() => setRoomType('any')}
-                          />
-                          <PillButton
-                            label="Private room"
-                            active={roomType === 'private-room'}
-                            onClick={() => setRoomType('private-room')}
-                          />
-                          <PillButton
-                            label="Entire place"
-                            active={roomType === 'entire-place'}
-                            onClick={() => setRoomType('entire-place')}
-                          />
-                          <PillButton
-                            label="Shared room"
-                            active={roomType === 'shared'}
-                            onClick={() => setRoomType('shared')}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <div className="nm-field-group" style={{ flex: 1 }}>
-                        <label className="nm-label">Contract start</label>
-                        <input
-                          type="date"
-                          className="nm-input"
-                          value={contractStart}
-                          onChange={(e) => setContractStart(e.target.value)}
-                        />
-                      </div>
-                      <div className="nm-field-group" style={{ flex: 1 }}>
-                        <label className="nm-label">Contract end</label>
-                        <input
-                          type="date"
-                          className="nm-input"
-                          value={contractEnd}
-                          onChange={(e) => setContractEnd(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 10,
-                        marginTop: 4,
-                      }}
-                    >
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          className="nm-bottom-fab nm-bounce"
-                          style={{ width: 52, height: 52, fontSize: 11 }}
-                          onClick={handleSearchClick}
-                        >
-                          🔍
-                        </button>
+              {activeCategory === 'nurses' ? (
+                showOnboarding ? (
+                  <>
+                    <NeumoCard>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
                         <button
                           type="button"
                           className="nm-pill"
                           style={{ fontSize: 12 }}
-                          onClick={handleClearClick}
+                          onClick={closeOnboardingAndRefresh}
                         >
-                          Clear
+                          ← Back to profile
+                        </button>
+                        <button
+                          type="button"
+                          className="nm-pill nm-pill--active"
+                          style={{ fontSize: 12 }}
+                          onClick={closeOnboardingAndRefresh}
+                        >
+                          Done
                         </button>
                       </div>
-                      <p className="nm-body" style={{ fontSize: 11 }}>
-                        Showing live matches from trusted nurse hosts.
+                    </NeumoCard>
+
+                    <OnboardingFlow />
+                  </>
+                ) : (
+                  <NursesTab
+                    prefs={prefs}
+                    onEdit={() => setShowOnboarding(true)}
+                  />
+                )
+              ) : (
+                <>
+                  {/* FILTERS – only for Housing / Hospitals */}
+                  {showFilters && (
+                    <NeumoCard>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10,
+                        }}
+                      >
+                        <div className="nm-field-group">
+                          <label className="nm-label">Hospital or city</label>
+                          <input
+                            className="nm-input"
+                            placeholder="e.g. Swedish Medical Center, Denver"
+                            value={hospitalOrCity}
+                            onChange={(e) =>
+                              setHospitalOrCity(e.target.value)
+                            }
+                          />
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 10,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div className="nm-field-group" style={{ flex: 1 }}>
+                            <label className="nm-label">
+                              Max monthly budget
+                            </label>
+                            <input
+                              className="nm-input"
+                              inputMode="numeric"
+                              value={
+                                maxBudget === '' ? '' : String(maxBudget)
+                              }
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^\d]/g, '')
+                                setMaxBudget(v ? Number(v) : '')
+                              }}
+                            />
+                          </div>
+                          <div className="nm-field-group" style={{ flex: 1 }}>
+                            <label className="nm-label">Room type</label>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 6,
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <PillButton
+                                label="Any"
+                                active={roomType === 'any'}
+                                onClick={() => setRoomType('any')}
+                              />
+                              <PillButton
+                                label="Private room"
+                                active={roomType === 'private-room'}
+                                onClick={() => setRoomType('private-room')}
+                              />
+                              <PillButton
+                                label="Entire place"
+                                active={roomType === 'entire-place'}
+                                onClick={() => setRoomType('entire-place')}
+                              />
+                              <PillButton
+                                label="Shared room"
+                                active={roomType === 'shared'}
+                                onClick={() => setRoomType('shared')}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 10,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div className="nm-field-group" style={{ flex: 1 }}>
+                            <label className="nm-label">Contract start</label>
+                            <input
+                              type="date"
+                              className="nm-input"
+                              value={contractStart}
+                              onChange={(e) =>
+                                setContractStart(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="nm-field-group" style={{ flex: 1 }}>
+                            <label className="nm-label">Contract end</label>
+                            <input
+                              type="date"
+                              className="nm-input"
+                              value={contractEnd}
+                              onChange={(e) =>
+                                setContractEnd(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            marginTop: 4,
+                          }}
+                        >
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              className="nm-bottom-fab nm-bounce"
+                              style={{ width: 52, height: 52, fontSize: 11 }}
+                              onClick={handleSearchClick}
+                            >
+                              🔍
+                            </button>
+                            <button
+                              type="button"
+                              className="nm-pill"
+                              style={{ fontSize: 12 }}
+                              onClick={handleClearClick}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <p className="nm-body" style={{ fontSize: 11 }}>
+                            Showing live matches from trusted nurse hosts.
+                          </p>
+                        </div>
+                      </div>
+                    </NeumoCard>
+                  )}
+
+                  {/* RESULTS */}
+                  <div style={{ marginTop: 10 }} ref={resultsRef}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <p className="nm-body" style={{ fontSize: 12 }}>
+                        {listingCountText}
                       </p>
+                      <button
+                        type="button"
+                        className="nm-pill"
+                        style={{ fontSize: 11 }}
+                      >
+                        ⭐ Save this search
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
+                      }}
+                    >
+                      {filteredListings.map((listing) => (
+                        <NeumoCard key={listing.id}>
+                          <ListingCard listing={listing} />
+                        </NeumoCard>
+                      ))}
                     </div>
                   </div>
-                </NeumoCard>
+                </>
               )}
-
-              {/* RESULTS */}
-              <div style={{ marginTop: 10 }} ref={resultsRef}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 8,
-                  }}
-                >
-                  <p className="nm-body" style={{ fontSize: 12 }}>
-                    {listingCountText}
-                  </p>
-                  {resultsMode === 'favorites' ? (
-                    <button
-                      type="button"
-                      className="nm-pill"
-                      style={{ fontSize: 11 }}
-                      onClick={() => setResultsMode('all')}
-                    >
-                      ← Back to all places
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="nm-pill"
-                      style={{ fontSize: 11 }}
-                    >
-                      ⭐ Save this search
-                    </button>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                  }}
-                >
-                  {visibleListings.map((listing) => (
-                    <NeumoCard key={listing.id}>
-                      <ListingCard
-                        listing={listing}
-                        isFavorite={favoriteIds.includes(listing.id)}
-                        onToggleFavorite={() => handleToggleFavorite(listing.id)}
-                      />
-                    </NeumoCard>
-                  ))}
-                </div>
-              </div>
             </>
           )}
         </main>
 
-        {/* Bottom nav – nurse app */}
+        {/* Bottom nav bar */}
         <nav className="nm-bottom-nav">
           <button
-            className="nm-bottom-icon nm-bottom-icon--active"
             type="button"
-            onClick={handleNavHome}
+            onClick={handleBottomHome}
+            className={
+              'nm-bottom-icon ' +
+              (activeBottom === 'home' ? 'nm-bottom-icon--active' : '')
+            }
           >
             🏠
           </button>
           <button
-            className="nm-bottom-icon"
             type="button"
-            onClick={handleNavSearchNav}
+            onClick={handleBottomSearch}
+            className={
+              'nm-bottom-icon ' +
+              (activeBottom === 'search' ? 'nm-bottom-icon--active' : '')
+            }
           >
             🔍
           </button>
           <button
-            className="nm-bottom-fab nm-bounce"
             type="button"
-            onClick={handleNavPlus}
+            onClick={handleBottomAdd}
+            className={
+              'nm-bottom-fab nm-bounce ' +
+              (activeBottom === 'add' ? 'nm-bottom-icon--active' : '')
+            }
           >
             +
           </button>
           <button
-            className="nm-bottom-icon"
             type="button"
-            onClick={handleNavFavorites}
+            onClick={handleBottomSaved}
+            className={
+              'nm-bottom-icon ' +
+              (activeBottom === 'saved' ? 'nm-bottom-icon--active' : '')
+            }
           >
             ❤️
           </button>
           <button
-            className="nm-bottom-icon"
             type="button"
-            onClick={handleNavProfile}
+            onClick={handleBottomProfile}
+            className={
+              'nm-bottom-icon ' +
+              (activeBottom === 'profile' ? 'nm-bottom-icon--active' : '')
+            }
           >
             👤
           </button>
@@ -755,95 +627,67 @@ const App: React.FC = () => {
   )
 }
 
-/* ---------------- AUTH SCREEN COMPONENT ---------------- */
-
-const AuthScreen: React.FC<{
-  onLogin: (role: 'nurse' | 'host') => void
-}> = ({ onLogin }) => {
-  const [selectedRole, setSelectedRole] = useState<'nurse' | 'host'>('nurse')
-
+const RoleChoice: React.FC<{
+  onNurse: () => void
+  onHost: () => void
+}> = ({ onNurse, onHost }) => {
   return (
-    <div className="nm-shell">
-      <div className="nm-phone">
-        <main
-          className="nm-screen-content nm-fade-in"
+    <div style={{ paddingTop: 8 }}>
+      <NeumoCard>
+        <div
           style={{
-            justifyContent: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
           }}
         >
-          <NeumoCard>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-              }}
-            >
-              <h1 className="nm-heading-lg" style={{ fontSize: 20 }}>
-                NightShift Housing
-              </h1>
-              <p className="nm-body" style={{ fontSize: 12 }}>
-                Choose how you want to use the app.
-              </p>
+          <h2 className="nm-heading-lg" style={{ fontSize: 20 }}>
+            Who&apos;s signing in?
+          </h2>
+          <p className="nm-body" style={{ fontSize: 12 }}>
+            Choose your role so we can show the right tools.
+          </p>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                  gap: 10,
-                }}
-              >
-                <button
-                  type="button"
-                  className={
-                    'nm-category-item ' +
-                    (selectedRole === 'nurse'
-                      ? 'nm-category-item--active'
-                      : '')
-                  }
-                  onClick={() => setSelectedRole('nurse')}
-                >
-                  <span className="nm-category-emoji">👩‍⚕️</span>
-                  <span className="nm-category-label">I&apos;m a nurse</span>
-                </button>
-                <button
-                  type="button"
-                  className={
-                    'nm-category-item ' +
-                    (selectedRole === 'host'
-                      ? 'nm-category-item--active'
-                      : '')
-                  }
-                  onClick={() => setSelectedRole('host')}
-                >
-                  <span className="nm-category-emoji">🏡</span>
-                  <span className="nm-category-label">I&apos;m a host</span>
-                </button>
-              </div>
+          <button
+            type="button"
+            className="nm-pill nm-pill--active"
+            style={{
+              fontSize: 14,
+              padding: '10px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+            onClick={onNurse}
+          >
+            <span>👩‍⚕️ I&apos;m a nurse</span>
+            <span style={{ fontSize: 16 }}>→</span>
+          </button>
 
-              <button
-                type="button"
-                className="nm-pill nm-pill--active"
-                style={{ alignSelf: 'flex-end', fontSize: 14 }}
-                onClick={() => onLogin(selectedRole)}
-              >
-                Continue
-              </button>
-            </div>
-          </NeumoCard>
-        </main>
-      </div>
+          <button
+            type="button"
+            className="nm-pill"
+            style={{
+              fontSize: 14,
+              padding: '10px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+            onClick={onHost}
+          >
+            <span>🏡 I&apos;m a host</span>
+            <span style={{ fontSize: 16 }}>→</span>
+          </button>
+        </div>
+      </NeumoCard>
     </div>
   )
 }
 
-/* ---------------- SHARED COMPONENTS ---------------- */
-
-const ListingCard: React.FC<{
-  listing: Listing
-  isFavorite: boolean
-  onToggleFavorite: () => void
-}> = ({ listing, isFavorite, onToggleFavorite }) => {
+const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
   return (
     <div
       style={{
@@ -860,7 +704,6 @@ const ListingCard: React.FC<{
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           flexShrink: 0,
-          position: 'relative',
         }}
       />
       <div style={{ flex: 1 }}>
@@ -904,22 +747,6 @@ const ListingCard: React.FC<{
           justifyContent: 'space-between',
         }}
       >
-        <button
-          type="button"
-          onClick={onToggleFavorite}
-          style={{
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            fontSize: 18,
-            alignSelf: 'flex-end',
-            marginBottom: 4,
-          }}
-          aria-label={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
-        >
-          {isFavorite ? '❤️' : '🤍'}
-        </button>
         <div>
           <span
             style={{
@@ -954,8 +781,7 @@ const ListingCard: React.FC<{
 const NursesTab: React.FC<{
   prefs: OnboardingPrefs | null
   onEdit: () => void
-  onLogout: () => void
-}> = ({ prefs, onEdit, onLogout }) => {
+}> = ({ prefs, onEdit }) => {
   const displayName =
     prefs?.name && prefs.name.trim() ? prefs.name.trim() : 'Travel nurse'
 
@@ -1075,31 +901,14 @@ const NursesTab: React.FC<{
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginTop: 4,
-              flexWrap: 'wrap',
-            }}
+          <button
+            type="button"
+            className="nm-pill nm-pill--active"
+            style={{ alignSelf: 'flex-start', fontSize: 13, marginTop: 4 }}
+            onClick={onEdit}
           >
-            <button
-              type="button"
-              className="nm-pill nm-pill--active"
-              style={{ fontSize: 13 }}
-              onClick={onEdit}
-            >
-              Edit preferences
-            </button>
-            <button
-              type="button"
-              className="nm-pill"
-              style={{ fontSize: 12 }}
-              onClick={onLogout}
-            >
-              Switch account
-            </button>
-          </div>
+            Edit preferences
+          </button>
         </div>
       </NeumoCard>
 

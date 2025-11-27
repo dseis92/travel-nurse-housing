@@ -7,7 +7,13 @@ const TOTAL_STEPS = 5
 type RoomTypeChoice = 'studio' | 'shared' | 'entire'
 type ShiftType = 'day' | 'night' | 'rotating'
 
-export const OnboardingFlow: React.FC = () => {
+type OnboardingFlowProps = {
+  onComplete?: () => void
+}
+
+export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
+  onComplete,
+}) => {
   const [step, setStep] = useState(0)
 
   // Core fields that App.tsx cares about
@@ -89,6 +95,11 @@ export const OnboardingFlow: React.FC = () => {
         extraNotes: extraNotes.trim() || undefined,
       }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    }
+
+    // Tell parent "I'm done" so it can close overlay / refresh profile
+    if (onComplete) {
+      onComplete()
     }
   }
 

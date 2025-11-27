@@ -371,3 +371,130 @@ body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ==== Listing details modal (bottom sheet) ==== */
+
+.nm-modal-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.nm-modal-inner {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 10px 16px;
+}
+
+.nm-modal-sheet {
+  padding: 0;
+  border-radius: 22px 22px 28px 28px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+  animation: nm-fade-in-scale 220ms ease-out;
+}
+
+.nm-modal-header {
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+}
+
+.nm-modal-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.nm-modal-chip-row {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nm-modal-chip {
+  font-size: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.25),
+    -3px -3px 8px rgba(255, 255, 255, 0.9);
+  color: #4b5563;
+}
+
+.nm-modal-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.nm-modal-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.nm-modal-title {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.nm-modal-sub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.nm-modal-price {
+  text-align: right;
+}
+
+.nm-modal-price-main {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.nm-modal-price-sub {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.nm-modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nm-tag--soft {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.nm-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nm-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
