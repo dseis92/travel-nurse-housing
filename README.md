@@ -32,3 +32,4 @@ Open the printed localhost URL to explore the UI. Build with `npm run build`; li
 4) Full booking engine: request/instant book, secure payments (Stripe), refunds/cancellations per listing, receipts, and payouts reporting.  
 5) In-app messaging, verification flows (RN license/ID), and review system tuned for shift work and safety.  
 6) Monitoring: analytics, error tracking, performance budgets, and e2e tests for search/filter/book flows.  
+# travel-nurse-housing
