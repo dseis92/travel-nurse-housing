@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { OnboardingFlow } from './onboarding/OnboardingFlow'
 import { NeumoCard, PillButton } from './neumo/NeumoKit'
 import { HostDashboard } from './HostDashboard'
-import { supabase } from './supabaseClient'
 
 type RoomTypeFilter = 'any' | 'private-room' | 'entire-place' | 'shared'
 
@@ -95,11 +94,14 @@ const LISTINGS: Listing[] = [
   },
 ]
 
+type BottomTab = 'home' | 'search' | 'new' | 'saved' | 'profile'
+
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'nurse' | 'host'>('nurse')
   const [activeCategory, setActiveCategory] = useState<
     'housing' | 'hospitals' | 'nurses'
   >('housing')
+  const [activeTab, setActiveTab] = useState<BottomTab>('home')
 
   const [prefs, setPrefs] = useState<OnboardingPrefs | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -110,13 +112,19 @@ const App: React.FC = () => {
   const [contractStart, setContractStart] = useState('')
   const [contractEnd, setContractEnd] = useState('')
 
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
-
   const resultsRef = useRef<HTMLDivElement | null>(null)
+  const searchHeaderRef = useRef<HTMLDivElement | null>(null)
 
+  // ✅ On first load: if no onboarding prefs, show onboarding automatically
   useEffect(() => {
     const loaded = loadOnboardingPrefs()
-    if (!loaded) return
+    if (!loaded) {
+      setViewMode('nurse')
+      setActiveCategory('nurses')
+      setActiveTab('profile')
+      setShowOnboarding(true)
+      return
+    }
 
     setPrefs(loaded)
 
@@ -127,7 +135,7 @@ const App: React.FC = () => {
     setRoomType(mapRoomTypeFromOnboarding(loaded.roomType))
   }, [])
 
-  // If you leave Nurses tab or Nurse view, close onboarding
+  // if you leave Nurses tab or Nurse view, close onboarding
   useEffect(() => {
     if (activeCategory !== 'nurses') {
       setShowOnboarding(false)
@@ -142,12 +150,12 @@ const App: React.FC = () => {
 
   const filteredListings = useMemo(() => {
     return LISTINGS.filter((listing) => {
-      const q = hospitalOrCity.trim().toLowerCase()
       const matchesLocation =
-        !q ||
-        listing.hospitalName.toLowerCase().includes(q) ||
-        listing.city.toLowerCase().includes(q) ||
-        listing.state.toLowerCase().includes(q)
+        !hospitalOrCity.trim() ||
+        listing.hospitalName
+          .toLowerCase()
+          .includes(hospitalOrCity.toLowerCase()) ||
+        listing.city.toLowerCase().includes(hospitalOrCity.toLowerCase())
 
       const matchesBudget =
         maxBudget === '' || listing.pricePerMonth <= maxBudget
@@ -172,6 +180,15 @@ const App: React.FC = () => {
     }
   }
 
+  const handleScrollToSearchBar = () => {
+    if (searchHeaderRef.current) {
+      searchHeaderRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }
+  }
+
   const handleClearClick = () => {
     setHospitalOrCity('')
     setMaxBudget(2000)
@@ -189,14 +206,6 @@ const App: React.FC = () => {
     setShowOnboarding(false)
   }
 
-  const handleOpenListing = (listing: Listing) => {
-    setSelectedListing(listing)
-  }
-
-  const handleCloseListing = () => {
-    setSelectedListing(null)
-  }
-
   return (
     <div className="nm-shell">
       <div className="nm-phone">
@@ -212,7 +221,10 @@ const App: React.FC = () => {
             <div className="nm-explore-toggle-buttons">
               <button
                 type="button"
-                onClick={() => setViewMode('nurse')}
+                onClick={() => {
+                  setViewMode('nurse')
+                  setActiveTab('home')
+                }}
                 className={
                   'nm-pill ' + (viewMode === 'nurse' ? 'nm-pill--active' : '')
                 }
@@ -222,7 +234,10 @@ const App: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode('host')}
+                onClick={() => {
+                  setViewMode('host')
+                  setActiveTab('home')
+                }}
                 className={
                   'nm-pill ' + (viewMode === 'host' ? 'nm-pill--active' : '')
                 }
@@ -234,7 +249,7 @@ const App: React.FC = () => {
           </div>
 
           {/* HEADER: search pill + category tabs */}
-          <NeumoCard className="nm-explore-header">
+          <NeumoCard className="nm-explore-header" ref={searchHeaderRef}>
             <button
               type="button"
               className="nm-search-pill"
@@ -258,7 +273,10 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => setActiveCategory('housing')}
+                onClick={() => {
+                  setActiveCategory('housing')
+                  setActiveTab('home')
+                }}
               >
                 <span className="nm-category-emoji">🏠</span>
                 <span className="nm-category-label">Housing</span>
@@ -271,7 +289,10 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => setActiveCategory('hospitals')}
+                onClick={() => {
+                  setActiveCategory('hospitals')
+                  setActiveTab('home')
+                }}
               >
                 <span className="nm-category-emoji">🏥</span>
                 <span className="nm-category-label">Hospitals</span>
@@ -284,7 +305,10 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => setActiveCategory('nurses')}
+                onClick={() => {
+                  setActiveCategory('nurses')
+                  setActiveTab('profile')
+                }}
               >
                 <span className="nm-category-emoji">👩‍⚕️</span>
                 <span className="nm-category-label">Nurses</span>
@@ -502,14 +526,34 @@ const App: React.FC = () => {
                   >
                     {filteredListings.map((listing) => (
                       <NeumoCard key={listing.id}>
-                        <ListingCard
-                          listing={listing}
-                          onView={handleOpenListing}
-                        />
+                        <ListingCard listing={listing} />
                       </NeumoCard>
                     ))}
                   </div>
                 </div>
+
+                {/* SAVED TAB PLACEHOLDER */}
+                {activeTab === 'saved' && (
+                  <div style={{ marginTop: 12 }}>
+                    <NeumoCard>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                        }}
+                      >
+                        <h3 className="nm-heading-lg" style={{ fontSize: 14 }}>
+                          Saved stays
+                        </h3>
+                        <p className="nm-body" style={{ fontSize: 12 }}>
+                          You don&apos;t have any saved places yet. Tap the ⭐
+                          save buttons on listings to build your shortlist.
+                        </p>
+                      </div>
+                    </NeumoCard>
+                  </div>
+                )}
               </>
             )
           ) : (
@@ -519,41 +563,97 @@ const App: React.FC = () => {
           )}
         </main>
 
-        {/* Bottom nav */}
+        {/* BOTTOM NAV */}
         <nav className="nm-bottom-nav">
-          <button className="nm-bottom-icon nm-bottom-icon--active" type="button">
+          {/* HOME */}
+          <button
+            type="button"
+            className={
+              'nm-bottom-icon ' +
+              (activeTab === 'home' ? 'nm-bottom-icon--active' : '')
+            }
+            onClick={() => {
+              setViewMode('nurse')
+              setActiveCategory('housing')
+              setActiveTab('home')
+              handleScrollToSearchBar()
+            }}
+          >
             🏠
           </button>
-          <button className="nm-bottom-icon" type="button">
+
+          {/* SEARCH (scroll to search/filter area) */}
+          <button
+            type="button"
+            className={
+              'nm-bottom-icon ' +
+              (activeTab === 'search' ? 'nm-bottom-icon--active' : '')
+            }
+            onClick={() => {
+              setViewMode('nurse')
+              setActiveCategory('housing')
+              setActiveTab('search')
+              handleScrollToSearchBar()
+            }}
+          >
             🔍
           </button>
-          <button className="nm-bottom-fab nm-bounce" type="button">
+
+          {/* PLUS = quick new flow → open onboarding in Nurses profile */}
+          <button
+            type="button"
+            className="nm-bottom-fab nm-bounce"
+            onClick={() => {
+              setViewMode('nurse')
+              setActiveCategory('nurses')
+              setActiveTab('new')
+              setShowOnboarding(true)
+            }}
+          >
             +
           </button>
-          <button className="nm-bottom-icon" type="button">
+
+          {/* SAVED */}
+          <button
+            type="button"
+            className={
+              'nm-bottom-icon ' +
+              (activeTab === 'saved' ? 'nm-bottom-icon--active' : '')
+            }
+            onClick={() => {
+              setViewMode('nurse')
+              setActiveCategory('housing')
+              setActiveTab('saved')
+            }}
+          >
             ❤️
           </button>
-          <button className="nm-bottom-icon" type="button">
+
+          {/* PROFILE (Nurse prefs) */}
+          <button
+            type="button"
+            className={
+              'nm-bottom-icon ' +
+              (activeTab === 'profile' ? 'nm-bottom-icon--active' : '')
+            }
+            onClick={() => {
+              setViewMode('nurse')
+              setActiveCategory('nurses')
+              setActiveTab('profile')
+              if (!prefs) {
+                setShowOnboarding(true)
+              }
+            }}
+          >
             👤
           </button>
         </nav>
-
-        {/* Listing details / booking sheet */}
-        {selectedListing && (
-          <ListingDetailsSheet
-            listing={selectedListing}
-            onClose={handleCloseListing}
-          />
-        )}
       </div>
     </div>
   )
 }
 
-const ListingCard: React.FC<{
-  listing: Listing
-  onView: (listing: Listing) => void
-}> = ({ listing, onView }) => {
+const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
   return (
     <div
       style={{
@@ -636,332 +736,8 @@ const ListingCard: React.FC<{
           type="button"
           className="nm-pill"
           style={{ fontSize: 11, alignSelf: 'flex-end' }}
-          onClick={() => onView(listing)}
         >
           View
-        </button>
-      </div>
-    </div>
-  )
-}
-
-const ListingDetailsSheet: React.FC<{
-  listing: Listing
-  onClose: () => void
-}> = ({ listing, onClose }) => {
-  const [checkIn, setCheckIn] = useState('')
-  const [checkOut, setCheckOut] = useState('')
-  const [message, setMessage] = useState('')
-
-  const [guestName, setGuestName] = useState('')
-  const [guestEmail, setGuestEmail] = useState('')
-  const [guestPhone, setGuestPhone] = useState('')
-
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const nights =
-    checkIn && checkOut
-      ? Math.max(
-          0,
-          Math.round(
-            (new Date(checkOut).getTime() - new Date(checkIn).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        )
-      : 0
-
-  const estimatedTotal =
-    nights > 0 ? Math.round((listing.pricePerMonth / 30) * nights) : null
-
-  const canSubmit =
-    !!checkIn &&
-    !!checkOut &&
-    !!guestName &&
-    !isSubmitting &&
-    new Date(checkOut) > new Date(checkIn)
-
-  const handleRequest = async () => {
-    if (!canSubmit) return
-
-    setIsSubmitting(true)
-    try {
-      const { error } = await supabase.from('bookings').insert([
-        {
-          listing_id: listing.id,
-          guest_name: guestName,
-          guest_email: guestEmail || null,
-          guest_phone: guestPhone || null,
-          start_date: checkIn,
-          end_date: checkOut,
-          status: 'pending',
-          // message is ONLY in UI for now; you can:
-          // 1) add a "note" column in bookings, or
-          // 2) create a separate booking_notes table later
-        },
-      ])
-
-      if (error) {
-        console.error('Error inserting booking:', error)
-        alert('There was a problem sending your request. Try again.')
-        return
-      }
-
-      alert('Stay request submitted to host.')
-      onClose()
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background:
-          'linear-gradient(to top, rgba(15,23,42,0.55), rgba(15,23,42,0.1))',
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        padding: 16,
-        zIndex: 40,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 430,
-          borderRadius: 28,
-          padding: 16,
-          background:
-            'radial-gradient(circle at top left, rgba(255,255,255,0.85), rgba(230,230,255,0.9))',
-          boxShadow:
-            '0 24px 60px rgba(15,23,42,0.45), -6px -6px 16px rgba(255,255,255,0.9)',
-          maxHeight: '85%',
-          overflowY: 'auto',
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 4,
-            borderRadius: 999,
-            background: 'rgba(148,163,184,0.6)',
-            margin: '0 auto 12px',
-          }}
-        />
-
-        <div
-          style={{
-            display: 'flex',
-            gap: 12,
-            marginBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 24,
-              backgroundImage: `url(${listing.imageUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              flexShrink: 0,
-            }}
-          />
-          <div style={{ flex: 1 }}>
-            <h2
-              className="nm-heading-lg"
-              style={{ fontSize: 16, marginBottom: 4 }}
-            >
-              {listing.title}
-            </h2>
-            <p className="nm-body" style={{ fontSize: 12 }}>
-              {listing.city}, {listing.state} · {listing.hospitalName}
-            </p>
-            <p className="nm-body" style={{ fontSize: 12 }}>
-              ~{listing.minutesToHospital} min to hospital ·{' '}
-              {listing.roomType === 'entire-place'
-                ? 'Entire place'
-                : listing.roomType === 'private-room'
-                ? 'Private room'
-                : 'Shared room'}
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 6,
-            marginBottom: 12,
-          }}
-        >
-          {listing.perks.map((perk) => (
-            <span key={perk} className="nm-tag">
-              {perk}
-            </span>
-          ))}
-        </div>
-
-        <NeumoCard>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            <h3 className="nm-heading-lg" style={{ fontSize: 14 }}>
-              Request your stay
-            </h3>
-
-            {/* Guest info */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 10,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div className="nm-field-group" style={{ flex: 1 }}>
-                <label className="nm-label">Your name</label>
-                <input
-                  className="nm-input"
-                  placeholder="Full name"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                />
-              </div>
-              <div className="nm-field-group" style={{ flex: 1 }}>
-                <label className="nm-label">Email</label>
-                <input
-                  className="nm-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: 10,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div className="nm-field-group" style={{ flex: 1 }}>
-                <label className="nm-label">Phone (optional)</label>
-                <input
-                  className="nm-input"
-                  placeholder="(555) 555-5555"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 10,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div className="nm-field-group" style={{ flex: 1 }}>
-                <label className="nm-label">Check-in</label>
-                <input
-                  type="date"
-                  className="nm-input"
-                  value={checkIn}
-                  onChange={(e) => setCheckIn(e.target.value)}
-                />
-              </div>
-              <div className="nm-field-group" style={{ flex: 1 }}>
-                <label className="nm-label">Check-out</label>
-                <input
-                  type="date"
-                  className="nm-input"
-                  value={checkOut}
-                  onChange={(e) => setCheckOut(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Message */}
-            <div className="nm-field-group">
-              <label className="nm-label">Message to host</label>
-              <textarea
-                className="nm-input"
-                rows={3}
-                placeholder="Tell the host about your assignment, shift schedule, and anything important (pets, night shift, etc.)"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                style={{ resize: 'none' }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: 4,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 16,
-                  }}
-                >
-                  ${listing.pricePerMonth.toLocaleString()}
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: '#6b7280',
-                      marginLeft: 4,
-                    }}
-                  >
-                    / month
-                  </span>
-                </div>
-                {estimatedTotal !== null && nights > 0 && (
-                  <div
-                    className="nm-body"
-                    style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}
-                  >
-                    ~{nights} night stay · est. ${estimatedTotal.toLocaleString()}
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                className="nm-pill nm-pill--active"
-                style={{ fontSize: 13, opacity: canSubmit ? 1 : 0.6 }}
-                onClick={handleRequest}
-                disabled={!canSubmit}
-              >
-                {isSubmitting ? 'Sending…' : 'Request stay'}
-              </button>
-            </div>
-          </div>
-        </NeumoCard>
-
-        <button
-          type="button"
-          className="nm-pill"
-          style={{ marginTop: 12, fontSize: 13, width: '100%' }}
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          Close
         </button>
       </div>
     </div>

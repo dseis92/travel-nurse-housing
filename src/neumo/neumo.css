@@ -426,3 +426,346 @@ textarea.nm-input {
     transform: translateY(0);
   }
 }
+
+/* === Onboarding full-height shell === */
+.nm-onboard-shell {
+  max-height: calc(100vh - 160px); /* inside phone shell */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+/* nicer scroll for onboarding only */
+.nm-onboard-shell::-webkit-scrollbar {
+  width: 4px;
+}
+.nm-onboard-shell::-webkit-scrollbar-thumb {
+  background: rgba(143, 99, 255, 0.3);
+  border-radius: 999px;
+}
+
+/* Progress card */
+.nm-onboard-progress-card {
+  animation: nm-step-in 280ms ease-out;
+}
+
+.nm-onboard-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.nm-onboard-hello {
+  font-weight: 600;
+  color: #433362;
+}
+
+.nm-onboard-step-label {
+  color: #9ca3af;
+}
+
+.nm-onboard-progress-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.nm-onboard-progress-dot {
+  width: 16px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.nm-onboard-progress-dot-inner {
+  width: 10px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+  transform: scaleX(0.4);
+  transform-origin: center;
+  transition: transform 200ms ease-out, background 200ms ease-out;
+}
+
+.nm-onboard-progress-dot--active .nm-onboard-progress-dot-inner {
+  background: linear-gradient(135deg, #8f63ff, #ff66c4);
+  transform: scaleX(1);
+  animation: nm-progress-pulse 900ms ease-in-out infinite;
+}
+
+.nm-onboard-progress-dot--complete .nm-onboard-progress-dot-inner {
+  background: linear-gradient(135deg, #8f63ff, #32e4c2);
+  transform: scaleX(1);
+}
+
+.nm-onboard-progress-names {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.nm-onboard-progress-name {
+  flex: 1;
+  font-size: 9px;
+  text-align: center;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.nm-onboard-progress-name--active {
+  color: #433362;
+  font-weight: 600;
+}
+
+/* Step card */
+.nm-onboard-step {
+  position: relative;
+  overflow: hidden;
+  animation: nm-step-in 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.nm-onboard-step--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Floating emoji bubble */
+.nm-onboard-floating-emoji {
+  position: absolute;
+  top: -20px;
+  right: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: radial-gradient(circle at top left, #ffffff, #e3d4ff);
+  box-shadow:
+    0 14px 30px rgba(45, 35, 80, 0.25),
+    -6px -6px 16px rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  animation: nm-onboard-float 3.2s ease-in-out infinite;
+}
+
+/* Titles / copy */
+.nm-onboard-title {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.nm-onboard-copy {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Layout bits */
+.nm-onboard-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.nm-onboard-row--align {
+  align-items: center;
+}
+
+.nm-onboard-input {
+  font-size: 13px;
+}
+
+.nm-onboard-input-addon {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 24px rgba(45, 35, 80, 0.18),
+    -4px -4px 10px rgba(255, 255, 255, 0.9);
+}
+
+/* note textarea */
+.nm-onboard-notes {
+  min-height: 70px;
+  resize: vertical;
+}
+
+/* Chips */
+.nm-onboard-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.nm-onboard-chip {
+  border-radius: 999px;
+  border: none;
+  outline: none;
+  padding: 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 10px 24px rgba(45, 35, 80, 0.18),
+    -4px -4px 10px rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition:
+    transform 120ms ease-out,
+    box-shadow 120ms ease-out,
+    background 120ms ease-out;
+}
+
+.nm-onboard-chip:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 32px rgba(45, 35, 80, 0.25),
+    -6px -6px 14px rgba(255, 255, 255, 0.95);
+}
+
+.nm-onboard-chip--active {
+  background: linear-gradient(135deg, #8f63ff, #ff66c4);
+  color: #ffffff;
+}
+
+/* Bullets */
+.nm-onboard-bullets {
+  margin-top: 10px;
+  padding-left: 18px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Buttons / actions */
+.nm-onboard-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nm-onboard-btn-secondary {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.nm-onboard-btn-primary {
+  font-size: 12px;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.nm-onboard-btn-primary--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Error text */
+.nm-onboard-error {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ef4444;
+}
+
+/* Loader */
+.nm-onboard-loader {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 3px solid rgba(143, 99, 255, 0.15);
+  border-top-color: #8f63ff;
+  border-right-color: #ff66c4;
+  animation: nm-spin 900ms linear infinite;
+}
+
+/* === Animations === */
+
+@keyframes nm-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nm-progress-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(143, 99, 255, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(143, 99, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(143, 99, 255, 0);
+  }
+}
+
+@keyframes nm-onboard-float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes nm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* small screen tweaks */
+@media (max-width: 480px) {
+  .nm-onboard-shell {
+    max-height: calc(100vh - 140px);
+  }
+}
+
+/* === OVERRIDE: make onboarding full-height in the phone viewport === */
+.nm-onboard-shell {
+  height: 100%;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+/* subtle flash when finishing */
+.nm-onboard-shell--finished {
+  animation: nm-onboard-finish-flash 600ms ease-out;
+}
+
+@keyframes nm-onboard-finish-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(50, 228, 194, 0.0);
+  }
+  30% {
+    box-shadow: 0 0 0 12px rgba(50, 228, 194, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(50, 228, 194, 0);
+  }
+}
