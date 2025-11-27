@@ -249,7 +249,7 @@ const App: React.FC = () => {
           </div>
 
           {/* HEADER: search pill + category tabs */}
-          <NeumoCard className="nm-explore-header" ref={searchHeaderRef}>
+          <NeumoCard className="nm-explore-header">
             <button
               type="button"
               className="nm-search-pill"

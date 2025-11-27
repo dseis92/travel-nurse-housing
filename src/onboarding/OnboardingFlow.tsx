@@ -119,7 +119,7 @@ export const OnboardingFlow: React.FC = () => {
     setTouched(true)
     if (!canNext) return
 
-    if (step < (totalSteps - 1) as StepIndex) {
+    if (step < totalSteps - 1) {
       setStep((s) => (s + 1) as StepIndex)
       setTouched(false)
       return
