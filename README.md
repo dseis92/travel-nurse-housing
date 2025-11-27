@@ -1,4 +1,4 @@
-# NightShift Housing – Travel Nurse Stays
+# The RN Nursery – Travel Nurse Stays
 
 Sleek, nurse-first housing finder inspired by AirBnB/VRBO with modern styling, quick filters, and trust signals tailored to clinicians on contract.
 

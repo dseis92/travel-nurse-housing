@@ -1,575 +1,528 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { NeumoCard } from '../neumo/NeumoKit'
+import React, { useState } from 'react'
+import type { FormEvent } from 'react'
 
 const STORAGE_KEY = 'nightshift_onboarding'
+const TOTAL_STEPS = 5
 
-type Draft = {
-  name: string
-  assignmentLocation: string
-  startDate: string
-  endDate: string
-  roomType: 'studio' | 'shared' | 'entire'
-  budget: number | ''
-  maxDistance: number | ''
-  shiftType: 'day' | 'night' | 'rotating'
-  noiseLevel: 'quiet' | 'flexible'
-  pets: 'yes' | 'no'
-  safetyNotes: string
-}
-
-const emptyDraft: Draft = {
-  name: '',
-  assignmentLocation: '',
-  startDate: '',
-  endDate: '',
-  roomType: 'studio',
-  budget: '',
-  maxDistance: 15,
-  shiftType: 'night',
-  noiseLevel: 'quiet',
-  pets: 'no',
-  safetyNotes: '',
-}
-
-const steps = [
-  'Welcome',
-  'Assignment',
-  'Housing',
-  'Lifestyle & safety',
-] as const
-
-type StepIndex = 0 | 1 | 2 | 3
+type RoomTypeChoice = 'studio' | 'shared' | 'entire'
+type ShiftType = 'day' | 'night' | 'rotating'
 
 export const OnboardingFlow: React.FC = () => {
-  const [step, setStep] = useState<StepIndex>(0)
-  const [touched, setTouched] = useState(false)
-  const [draft, setDraft] = useState<Draft>(emptyDraft)
-  const [hasLoaded, setHasLoaded] = useState(false)
+  const [step, setStep] = useState(0)
 
-  // Load existing prefs (if any)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY)
-      if (!raw) {
-        setHasLoaded(true)
-        return
-      }
-      const parsed = JSON.parse(raw)
-      setDraft((prev) => ({
-        ...prev,
-        ...parsed,
-      }))
-    } catch {
-      // ignore bad JSON
-    } finally {
-      setHasLoaded(true)
-    }
-  }, [])
+  // Core fields that App.tsx cares about
+  const [nurseName, setNurseName] = useState('')
+  const [assignmentLocation, setAssignmentLocation] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [roomType, setRoomType] = useState<RoomTypeChoice | null>(null)
+  const [budget, setBudget] = useState<string>('2200')
+  const [maxDistance, setMaxDistance] = useState<string>('20')
 
-  const saveDraft = (next: Draft) => {
-    if (typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // ignore storage failures
-    }
-  }
+  // Extra fun / nurse-specific details
+  const [pets, setPets] = useState<boolean | null>(null)
+  const [amenities, setAmenities] = useState<string[]>([])
+  const [shiftType, setShiftType] = useState<ShiftType | null>(null)
+  const [noiseLevel, setNoiseLevel] = useState<'quiet' | 'medium' | 'okay'>(
+    'medium',
+  )
+  const [extraNotes, setExtraNotes] = useState('')
 
-  const updateDraft = (patch: Partial<Draft>) => {
-    setDraft((prev) => {
-      const next = { ...prev, ...patch }
-      saveDraft(next)
-      return next
-    })
-  }
-
-  const totalSteps = steps.length
-  const currentTitle = useMemo(() => steps[step], [step])
-
-  const nameDisplay = draft.name.trim() || 'Travel nurse'
-
-  // --------- VALIDATION PER STEP (LAST STEP IS NOW ALWAYS ALLOWED) ----------
-  const stepError = useMemo(() => {
-    switch (step) {
-      case 0:
-        if (!draft.name.trim()) return 'Tell us what to call you.'
-        return ''
-      case 1:
-        if (!draft.assignmentLocation.trim())
-          return 'Add your hospital or assignment city.'
-        if (!draft.startDate || !draft.endDate)
-          return 'Add your contract start and end dates.'
-        return ''
-      case 2:
-        if (draft.budget === '' || Number.isNaN(Number(draft.budget)))
-          return 'Set a monthly budget that feels right for you.'
-        return ''
-      case 3:
-        // LAST STEP: no hard block, safety notes are helpful but OPTIONAL
-        return ''
-      default:
-        return ''
-    }
-  }, [step, draft])
-
-  const canNext = stepError === ''
-
-  const goNext = () => {
-    setTouched(true)
-    if (!canNext) return
-
-    if (step < totalSteps - 1) {
-      setStep((s) => (s + 1) as StepIndex)
-      setTouched(false)
-      return
-    }
-
-    // Final step – already saved via updateDraft, just give a tiny visual nudge
-    if (typeof window !== 'undefined') {
-      window.setTimeout(() => {
-        // little haptic-ish flash using CSS class
-        const shell = document.querySelector('.nm-onboard-shell')
-        shell?.classList.add('nm-onboard-shell--finished')
-        window.setTimeout(
-          () => shell?.classList.remove('nm-onboard-shell--finished'),
-          600,
-        )
-      }, 0)
-    }
-  }
-
-  const goBack = () => {
-    setTouched(false)
-    if (step === 0) return
-    setStep((s) => (s - 1) as StepIndex)
-  }
-
-  if (!hasLoaded) {
-    return (
-      <div className="nm-onboard-shell">
-        <NeumoCard className="nm-onboard-step nm-onboard-step--center">
-          <div className="nm-onboard-loader" />
-          <p className="nm-body" style={{ fontSize: 12, marginTop: 12 }}>
-            Getting your profile ready…
-          </p>
-        </NeumoCard>
-      </div>
+  const toggleAmenity = (value: string) => {
+    setAmenities((prev) =>
+      prev.includes(value) ? prev.filter((a) => a !== value) : [...prev, value],
     )
   }
 
-  return (
-    <div className="nm-onboard-shell">
-      {/* Progress header */}
-      <NeumoCard className="nm-onboard-progress-card">
-        <div className="nm-onboard-progress-top">
-          <span className="nm-onboard-hello">Hi, {nameDisplay}</span>
-          <span className="nm-onboard-step-label">
-            Step {step + 1} of {totalSteps}
-          </span>
-        </div>
-        <div className="nm-onboard-progress-bar">
-          {steps.map((label, index) => {
-            const active = index === step
-            const complete = index < step
-            return (
-              <div
-                key={label}
-                className={
-                  'nm-onboard-progress-dot' +
-                  (active ? ' nm-onboard-progress-dot--active' : '') +
-                  (complete ? ' nm-onboard-progress-dot--complete' : '')
-                }
-              >
-                <span className="nm-onboard-progress-dot-inner" />
+  const canGoNext = (s: number): boolean => {
+    switch (s) {
+      case 0:
+        return nurseName.trim().length > 0
+      case 1:
+        return (
+          assignmentLocation.trim().length > 0 &&
+          !!startDate &&
+          !!endDate
+        )
+      case 2:
+        return !!roomType && !!budget
+      case 3:
+        return !!shiftType && noiseLevel !== undefined && maxDistance !== ''
+      case 4:
+        // wrap-up can be skipped, but still "complete"
+        return true
+      default:
+        return false
+    }
+  }
+
+  const handleNext = (e?: FormEvent) => {
+    if (e) e.preventDefault()
+    if (!canGoNext(step)) return
+    if (step < TOTAL_STEPS - 1) {
+      setStep((prev) => prev + 1)
+    } else {
+      handleFinish()
+    }
+  }
+
+  const handleBack = () => {
+    if (step === 0) return
+    setStep((prev) => prev - 1)
+  }
+
+  const handleFinish = () => {
+    // Persist preferences so App.tsx can read them
+    if (typeof window !== 'undefined') {
+      const payload = {
+        name: nurseName.trim(),
+        assignmentLocation: assignmentLocation.trim(),
+        startDate,
+        endDate,
+        roomType: roomType ?? undefined,
+        budget: budget ? Number(budget) : undefined,
+        maxDistance: maxDistance ? Number(maxDistance) : undefined,
+        pets,
+        amenities,
+        shiftType,
+        noiseLevel,
+        extraNotes: extraNotes.trim() || undefined,
+      }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    }
+  }
+
+  const progressPercent = ((step + 1) / TOTAL_STEPS) * 100
+
+  const renderStepTitle = () => {
+    switch (step) {
+      case 0:
+        return 'Welcome!'
+      case 1:
+        return 'Your next assignment'
+      case 2:
+        return 'Housing vibe'
+      case 3:
+        return 'Lifestyle & commute'
+      case 4:
+        return 'Final touches'
+      default:
+        return ''
+    }
+  }
+
+  const renderStepSubtitle = () => {
+    switch (step) {
+      case 0:
+        return 'Let’s make this feel like your app.'
+      case 1:
+        return 'We’ll anchor everything to your contract.'
+      case 2:
+        return 'Tell us what “home” feels like between shifts.'
+      case 3:
+        return 'Match your schedule and comfort level.'
+      case 4:
+        return 'Anything else we should know?'
+      default:
+        return ''
+    }
+  }
+
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return (
+          <div className="nm-onboarding-step nm-onboarding-step--hero" key={0}>
+            <div className="nm-onboarding-hero-graphic nm-float-slow">
+              <div className="nm-onboarding-badge">✨ NightShift Housing</div>
+              <div className="nm-onboarding-hero-nurse">
+                <span className="nm-onboarding-hero-emoji">👩‍⚕️</span>
+                <span className="nm-onboarding-hero-emoji">🧳</span>
+                <span className="nm-onboarding-hero-emoji">🏙️</span>
               </div>
-            )
-          })}
-        </div>
-        <div className="nm-onboard-progress-names">
-          {steps.map((label, index) => (
-            <span
-              key={label}
-              className={
-                'nm-onboard-progress-name' +
-                (index === step ? ' nm-onboard-progress-name--active' : '')
-              }
-            >
-              {label}
+            </div>
+            <div className="nm-onboarding-fields">
+              <label className="nm-label">
+                What should we call you?
+                <input
+                  className="nm-input"
+                  placeholder="e.g. Jess, RN"
+                  value={nurseName}
+                  onChange={(e) => setNurseName(e.target.value)}
+                />
+              </label>
+              <p className="nm-onboarding-help">
+                We’ll use this to personalize your matches and messages.
+              </p>
+            </div>
+          </div>
+        )
+      case 1:
+        return (
+          <div className="nm-onboarding-step" key={1}>
+            <div className="nm-onboarding-row nm-onboarding-row--split">
+              <div className="nm-onboarding-chip-stack">
+                <div className="nm-onboarding-chip nm-onboarding-chip--map nm-float">
+                  📍
+                </div>
+                <div className="nm-onboarding-chip nm-onboarding-chip--calendar nm-float-delay">
+                  📅
+                </div>
+              </div>
+              <div className="nm-onboarding-fields">
+                <label className="nm-label">
+                  Where’s your next assignment?
+                  <input
+                    className="nm-input"
+                    placeholder="Hospital or city (e.g. Swedish Medical, Denver)"
+                    value={assignmentLocation}
+                    onChange={(e) => setAssignmentLocation(e.target.value)}
+                  />
+                </label>
+                <div className="nm-onboarding-row">
+                  <label className="nm-label nm-onboarding-flex-1">
+                    Start date
+                    <input
+                      type="date"
+                      className="nm-input"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="nm-label nm-onboarding-flex-1">
+                    End date
+                    <input
+                      type="date"
+                      className="nm-input"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <p className="nm-onboarding-help">
+                  We’ll prioritize places that fit your contract window.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      case 2:
+        return (
+          <div className="nm-onboarding-step" key={2}>
+            <div className="nm-onboarding-fields">
+              <div className="nm-onboarding-row nm-onboarding-row--space">
+                <div className="nm-onboarding-chip nm-onboarding-chip--room nm-float">
+                  🛏️
+                </div>
+                <div className="nm-onboarding-chip nm-onboarding-chip--coin nm-float-delay">
+                  💸
+                </div>
+              </div>
+
+              <div className="nm-onboarding-section-label">Room type</div>
+              <div className="nm-onboarding-pill-row">
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (roomType === 'studio' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setRoomType('studio')}
+                >
+                  Cozy studio
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (roomType === 'shared' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setRoomType('shared')}
+                >
+                  Shared nurse house
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (roomType === 'entire' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setRoomType('entire')}
+                >
+                  Entire place
+                </button>
+              </div>
+
+              <label className="nm-label" style={{ marginTop: 10 }}>
+                Target monthly budget
+                <div className="nm-onboarding-row">
+                  <input
+                    className="nm-input"
+                    inputMode="numeric"
+                    value={budget}
+                    onChange={(e) =>
+                      setBudget(e.target.value.replace(/[^\d]/g, ''))
+                    }
+                    placeholder="e.g. 2200"
+                  />
+                  <span className="nm-onboarding-inline-tag">USD / month</span>
+                </div>
+              </label>
+
+              <div className="nm-onboarding-section-label" style={{ marginTop: 12 }}>
+                Pets?
+              </div>
+              <div className="nm-onboarding-pill-row">
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (pets === true ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setPets(true)}
+                >
+                  🐾 Yes, traveling with pets
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (pets === false ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setPets(false)}
+                >
+                  🚫 No pets
+                </button>
+              </div>
+
+              <div className="nm-onboarding-section-label" style={{ marginTop: 12 }}>
+                Must-have amenities
+              </div>
+              <div className="nm-onboarding-pill-row nm-onboarding-pill-row--wrap">
+                {[
+                  'Fast Wi-Fi',
+                  'In-unit laundry',
+                  'Dedicated desk',
+                  'Blackout curtains',
+                  'Parking included',
+                  'Nurses only building',
+                  'Quiet hours',
+                  'Short commute',
+                ].map((amenity) => (
+                  <button
+                    key={amenity}
+                    type="button"
+                    className={
+                      'nm-pill nm-pill--choice nm-pill--small ' +
+                      (amenities.includes(amenity)
+                        ? 'nm-pill--choice-active'
+                        : '')
+                    }
+                    onClick={() => toggleAmenity(amenity)}
+                  >
+                    {amenity}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      case 3:
+        return (
+          <div className="nm-onboarding-step" key={3}>
+            <div className="nm-onboarding-fields">
+              <div className="nm-onboarding-section-label">Shift type</div>
+              <div className="nm-onboarding-pill-row">
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (shiftType === 'day' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setShiftType('day')}
+                >
+                  ☀️ Day shift
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (shiftType === 'night' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setShiftType('night')}
+                >
+                  🌙 Night shift
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (shiftType === 'rotating' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setShiftType('rotating')}
+                >
+                  🔄 Rotating
+                </button>
+              </div>
+
+              <div className="nm-onboarding-section-label" style={{ marginTop: 12 }}>
+                Noise level at home
+              </div>
+              <div className="nm-onboarding-pill-row">
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (noiseLevel === 'quiet' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setNoiseLevel('quiet')}
+                >
+                  🔕 Very quiet, please
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (noiseLevel === 'medium' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setNoiseLevel('medium')}
+                >
+                  🔉 Some noise is okay
+                </button>
+                <button
+                  type="button"
+                  className={
+                    'nm-pill nm-pill--choice ' +
+                    (noiseLevel === 'okay' ? 'nm-pill--choice-active' : '')
+                  }
+                  onClick={() => setNoiseLevel('okay')}
+                >
+                  🎧 I can sleep anywhere
+                </button>
+              </div>
+
+              <label className="nm-label" style={{ marginTop: 12 }}>
+                Max distance to hospital (minutes)
+                <div className="nm-onboarding-row">
+                  <input
+                    className="nm-input"
+                    inputMode="numeric"
+                    value={maxDistance}
+                    onChange={(e) =>
+                      setMaxDistance(e.target.value.replace(/[^\d]/g, ''))
+                    }
+                    placeholder="e.g. 20"
+                  />
+                  <span className="nm-onboarding-inline-tag">drive time</span>
+                </div>
+              </label>
+
+              <p className="nm-onboarding-help">
+                We’ll try to keep options within your comfort zone for commute
+                and rest.
+              </p>
+            </div>
+          </div>
+        )
+      case 4:
+        return (
+          <div className="nm-onboarding-step" key={4}>
+            <div className="nm-onboarding-fields">
+              <div className="nm-onboarding-chip nm-onboarding-chip--shield nm-float">
+                🛡️
+              </div>
+              <p className="nm-body" style={{ fontSize: 12, marginTop: 8 }}>
+                We verify hosts and highlight safety-forward listings. Add
+                anything else we should know to match you better.
+              </p>
+              <label className="nm-label" style={{ marginTop: 10 }}>
+                Anything else you want to share?
+                <textarea
+                  className="nm-input nm-input--textarea"
+                  rows={4}
+                  placeholder="Allergies, accessibility needs, roommate preferences, parking requirements…"
+                  value={extraNotes}
+                  onChange={(e) => setExtraNotes(e.target.value)}
+                />
+              </label>
+              <p className="nm-onboarding-help">
+                You can always update this later in your profile.
+              </p>
+            </div>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="nm-onboarding-root">
+      <form
+        className="nm-onboarding-inner"
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleNext()
+        }}
+      >
+        {/* Progress bar + step labels */}
+        <div className="nm-onboarding-top">
+          <div className="nm-onboarding-progress-bar">
+            <div
+              className="nm-onboarding-progress-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="nm-onboarding-step-labels">
+            <span className="nm-onboarding-step-title">
+              {renderStepTitle()}
             </span>
-          ))}
+            <span className="nm-onboarding-step-sub">
+              {renderStepSubtitle()}
+            </span>
+          </div>
         </div>
-        <div className="nm-onboard-current-label">{currentTitle}</div>
-      </NeumoCard>
 
-      {/* STEP 0 */}
-      {step === 0 && (
-        <NeumoCard className="nm-onboard-step">
-          <div className="nm-onboard-floating-emoji">🩺</div>
-          <h2 className="nm-heading-lg nm-onboard-title">
-            Welcome to NightShift Housing
-          </h2>
-          <p className="nm-body nm-onboard-copy">
-            We&apos;ll use a few quick questions to match you with nurse-only
-            housing that actually fits your contract.
-          </p>
+        {/* Main animated slide */}
+        <div key={step} className="nm-onboarding-slide">
+          {renderStep()}
+        </div>
 
-          <label className="nm-label" style={{ marginTop: 16 }}>
-            What should we call you?
-          </label>
-          <input
-            className="nm-input nm-onboard-input"
-            placeholder="e.g. Sam, Jess, or 'Traveling ER RN'"
-            value={draft.name}
-            onChange={(e) => updateDraft({ name: e.target.value })}
-          />
-
-          <ul className="nm-onboard-bullets">
-            <li>We never show your full name to hosts until you book.</li>
-            <li>You can change this anytime from your profile.</li>
-          </ul>
-
-          {touched && stepError && (
-            <p className="nm-onboard-error">{stepError}</p>
-          )}
-
-          <div className="nm-onboard-actions">
+        {/* Footer controls */}
+        <div className="nm-onboarding-footer">
+          <div className="nm-onboarding-dots">
+            {Array.from({ length: TOTAL_STEPS }).map((_, idx) => (
+              <span
+                key={idx}
+                className={
+                  'nm-onboarding-dot ' +
+                  (idx === step ? 'nm-onboarding-dot--active' : '')
+                }
+              />
+            ))}
+          </div>
+          <div className="nm-onboarding-footer-actions">
             <button
               type="button"
-              className="nm-pill nm-onboard-btn-secondary"
-              onClick={goBack}
+              className="nm-pill"
               disabled={step === 0}
+              onClick={handleBack}
             >
               Back
             </button>
             <button
-              type="button"
+              type="submit"
               className={
-                'nm-pill nm-pill--active nm-onboard-btn-primary' +
-                (!canNext ? ' nm-onboard-btn-primary--disabled' : '')
+                'nm-pill nm-pill--active nm-onboarding-next ' +
+                (!canGoNext(step) ? 'nm-onboarding-next--disabled' : '')
               }
-              onClick={goNext}
+              disabled={!canGoNext(step)}
             >
-              Next
+              {step === TOTAL_STEPS - 1 ? 'Finish' : 'Next'}
             </button>
           </div>
-        </NeumoCard>
-      )}
-
-      {/* STEP 1 */}
-      {step === 1 && (
-        <NeumoCard className="nm-onboard-step">
-          <div className="nm-onboard-floating-emoji">📍</div>
-          <h2 className="nm-heading-lg nm-onboard-title">
-            Where&apos;s your next assignment?
-          </h2>
-          <p className="nm-body nm-onboard-copy">
-            We&apos;ll prioritize housing close to your hospital and contract
-            dates.
-          </p>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Hospital or city
-          </label>
-          <input
-            className="nm-input nm-onboard-input"
-            placeholder="e.g. Swedish Medical Center, Denver"
-            value={draft.assignmentLocation}
-            onChange={(e) =>
-              updateDraft({ assignmentLocation: e.target.value })
-            }
-          />
-
-          <div className="nm-onboard-row">
-            <div className="nm-field-group" style={{ flex: 1 }}>
-              <label className="nm-label">Contract start</label>
-              <input
-                type="date"
-                className="nm-input nm-onboard-input"
-                value={draft.startDate}
-                onChange={(e) => updateDraft({ startDate: e.target.value })}
-              />
-            </div>
-            <div className="nm-field-group" style={{ flex: 1 }}>
-              <label className="nm-label">Contract end</label>
-              <input
-                type="date"
-                className="nm-input nm-onboard-input"
-                value={draft.endDate}
-                onChange={(e) => updateDraft({ endDate: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {touched && stepError && (
-            <p className="nm-onboard-error">{stepError}</p>
-          )}
-
-          <div className="nm-onboard-actions">
-            <button
-              type="button"
-              className="nm-pill nm-onboard-btn-secondary"
-              onClick={goBack}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-pill nm-pill--active nm-onboard-btn-primary' +
-                (!canNext ? ' nm-onboard-btn-primary--disabled' : '')
-              }
-              onClick={goNext}
-            >
-              Next
-            </button>
-          </div>
-        </NeumoCard>
-      )}
-
-      {/* STEP 2 */}
-      {step === 2 && (
-        <NeumoCard className="nm-onboard-step">
-          <div className="nm-onboard-floating-emoji">🏡</div>
-          <h2 className="nm-heading-lg nm-onboard-title">
-            What kind of place feels right?
-          </h2>
-          <p className="nm-body nm-onboard-copy">
-            Pick the housing style and budget that match your contract.
-          </p>
-
-          <label className="nm-label" style={{ marginTop: 8 }}>
-            Room type
-          </label>
-          <div className="nm-onboard-chip-row">
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.roomType === 'studio' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ roomType: 'studio' })}
-            >
-              🛏 Private studio
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.roomType === 'shared' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ roomType: 'shared' })}
-            >
-              👯 Shared housing
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.roomType === 'entire' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ roomType: 'entire' })}
-            >
-              🏠 Entire place
-            </button>
-          </div>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Max monthly budget
-          </label>
-          <div className="nm-onboard-row nm-onboard-row--align">
-            <input
-              className="nm-input nm-onboard-input"
-              inputMode="numeric"
-              value={draft.budget === '' ? '' : String(draft.budget)}
-              placeholder="e.g. 2200"
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d]/g, '')
-                updateDraft({ budget: v ? Number(v) : '' })
-              }}
-            />
-            <span className="nm-onboard-input-addon">USD / month</span>
-          </div>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Max distance from hospital
-          </label>
-          <div className="nm-onboard-row nm-onboard-row--align">
-            <input
-              className="nm-input nm-onboard-input"
-              inputMode="numeric"
-              value={draft.maxDistance === '' ? '' : String(draft.maxDistance)}
-              placeholder="e.g. 15"
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^\d]/g, '')
-                updateDraft({ maxDistance: v ? Number(v) : '' })
-              }}
-            />
-            <span className="nm-onboard-input-addon">min drive</span>
-          </div>
-
-          {touched && stepError && (
-            <p className="nm-onboard-error">{stepError}</p>
-          )}
-
-          <div className="nm-onboard-actions">
-            <button
-              type="button"
-              className="nm-pill nm-onboard-btn-secondary"
-              onClick={goBack}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-pill nm-pill--active nm-onboard-btn-primary' +
-                (!canNext ? ' nm-onboard-btn-primary--disabled' : '')
-              }
-              onClick={goNext}
-            >
-              Next
-            </button>
-          </div>
-        </NeumoCard>
-      )}
-
-      {/* STEP 3 */}
-      {step === 3 && (
-        <NeumoCard className="nm-onboard-step">
-          <div className="nm-onboard-floating-emoji">🌙</div>
-          <h2 className="nm-heading-lg nm-onboard-title">
-            How do you work and rest?
-          </h2>
-          <p className="nm-body nm-onboard-copy">
-            Hosts use this to keep things nurse-friendly: quiet days for
-            night-shifters, no surprise parties on post-call.
-          </p>
-
-          <label className="nm-label" style={{ marginTop: 8 }}>
-            Typical shift
-          </label>
-          <div className="nm-onboard-chip-row">
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.shiftType === 'day' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ shiftType: 'day' })}
-            >
-              ☀️ Day shift
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.shiftType === 'night' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ shiftType: 'night' })}
-            >
-              🌙 Night shift
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.shiftType === 'rotating'
-                  ? ' nm-onboard-chip--active'
-                  : '')
-              }
-              onClick={() => updateDraft({ shiftType: 'rotating' })}
-            >
-              🔄 Rotating
-            </button>
-          </div>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Noise & roommates
-          </label>
-          <div className="nm-onboard-chip-row">
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.noiseLevel === 'quiet'
-                  ? ' nm-onboard-chip--active'
-                  : '')
-              }
-              onClick={() => updateDraft({ noiseLevel: 'quiet' })}
-            >
-              🤫 Quiet please
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.noiseLevel === 'flexible'
-                  ? ' nm-onboard-chip--active'
-                  : '')
-              }
-              onClick={() => updateDraft({ noiseLevel: 'flexible' })}
-            >
-              🙂 I&apos;m flexible
-            </button>
-          </div>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Traveling with pets?
-          </label>
-          <div className="nm-onboard-chip-row">
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.pets === 'yes' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ pets: 'yes' })}
-            >
-              🐾 Yes, bring on the fur
-            </button>
-            <button
-              type="button"
-              className={
-                'nm-onboard-chip' +
-                (draft.pets === 'no' ? ' nm-onboard-chip--active' : '')
-              }
-              onClick={() => updateDraft({ pets: 'no' })}
-            >
-              🙅‍♀️ No pets this contract
-            </button>
-          </div>
-
-          <label className="nm-label" style={{ marginTop: 12 }}>
-            Anything hosts should know? (optional)
-          </label>
-          <textarea
-            className="nm-input nm-onboard-input nm-onboard-notes"
-            placeholder="Allergies, safety needs, parking requirements, elevator access, anything that makes your stay safer and smoother."
-            value={draft.safetyNotes}
-            onChange={(e) => updateDraft({ safetyNotes: e.target.value })}
-          />
-
-          {/* no hard error on last step anymore */}
-
-          <div className="nm-onboard-actions">
-            <button
-              type="button"
-              className="nm-pill nm-onboard-btn-secondary"
-              onClick={goBack}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className="nm-pill nm-pill--active nm-onboard-btn-primary"
-              onClick={goNext}
-            >
-              Finish
-            </button>
-          </div>
-        </NeumoCard>
-      )}
+        </div>
+      </form>
     </div>
   )
 }

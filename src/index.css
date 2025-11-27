@@ -24,3 +24,350 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* ==== Onboarding: full-screen story flow ==== */
+
+.nm-onboarding-panel {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+}
+
+.nm-onboarding-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.nm-onboarding-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px 18px 18px;
+  gap: 14px;
+}
+
+/* Top progress / titles */
+
+.nm-onboarding-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nm-onboarding-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.nm-onboarding-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8f63ff, #ff66c4);
+  transition: width 220ms ease-out;
+}
+
+.nm-onboarding-step-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nm-onboarding-step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.nm-onboarding-step-sub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Main slide area */
+
+.nm-onboarding-slide {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.nm-onboarding-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: nm-slide-up 260ms ease-out, nm-fade-in-scale 260ms ease-out;
+}
+
+.nm-onboarding-step--hero {
+  align-items: stretch;
+}
+
+/* Scrollable fields */
+
+.nm-onboarding-fields {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* Hero graphic */
+
+.nm-onboarding-hero-graphic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #eaf3ff, #e3d4ff);
+  box-shadow:
+    0 20px 40px rgba(45, 35, 80, 0.25),
+    -6px -6px 16px rgba(255, 255, 255, 0.9);
+  margin-bottom: 10px;
+}
+
+.nm-onboarding-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 6px 14px rgba(15, 23, 42, 0.1),
+    -3px -3px 8px rgba(255, 255, 255, 0.9);
+  margin-bottom: 10px;
+}
+
+.nm-onboarding-hero-nurse {
+  display: flex;
+  gap: 10px;
+  font-size: 26px;
+}
+
+/* Layout helpers */
+
+.nm-onboarding-row {
+  display: flex;
+  gap: 10px;
+}
+
+.nm-onboarding-row--split {
+  align-items: flex-start;
+}
+
+.nm-onboarding-row--space {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nm-onboarding-flex-1 {
+  flex: 1;
+}
+
+.nm-onboarding-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+/* Chips / icons */
+
+.nm-onboarding-chip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nm-onboarding-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 14px 28px rgba(45, 35, 80, 0.2),
+    -4px -4px 10px rgba(255, 255, 255, 0.9);
+  font-size: 18px;
+}
+
+.nm-onboarding-chip--map {
+  background: linear-gradient(135deg, #8f63ff, #32e4c2);
+}
+
+.nm-onboarding-chip--calendar {
+  background: linear-gradient(135deg, #ff9f4c, #ffe177);
+}
+
+.nm-onboarding-chip--room {
+  background: linear-gradient(135deg, #ff66c4, #8f63ff);
+}
+
+.nm-onboarding-chip--coin {
+  background: linear-gradient(135deg, #32e4c2, #8f63ff);
+}
+
+.nm-onboarding-chip--shield {
+  background: linear-gradient(135deg, #8f63ff, #4ade80);
+}
+
+/* Pill choices */
+
+.nm-onboarding-pill-row {
+  display: flex;
+  gap: 8px;
+}
+
+.nm-onboarding-pill-row--wrap {
+  flex-wrap: wrap;
+}
+
+.nm-pill--choice {
+  font-size: 11px;
+  padding-inline: 10px;
+  padding-block: 7px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 22px rgba(45, 35, 80, 0.15),
+    -4px -4px 10px rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
+  white-space: nowrap;
+}
+
+.nm-pill--choice-active {
+  background: linear-gradient(135deg, #8f63ff, #ff66c4);
+  color: white;
+  box-shadow:
+    0 16px 32px rgba(88, 28, 135, 0.35),
+    -4px -4px 10px rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.nm-pill--small {
+  font-size: 10px;
+}
+
+/* Inline tags */
+
+.nm-onboarding-inline-tag {
+  font-size: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 8px 18px rgba(45, 35, 80, 0.15),
+    -3px -3px 8px rgba(255, 255, 255, 0.9);
+  color: #6b7280;
+}
+
+/* Help text */
+
+.nm-onboarding-help {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* Footer / dots */
+
+.nm-onboarding-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nm-onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nm-onboarding-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.6);
+  transition: all 160ms ease-out;
+}
+
+.nm-onboarding-dot--active {
+  width: 18px;
+  background: linear-gradient(135deg, #8f63ff, #ff66c4);
+}
+
+.nm-onboarding-footer-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nm-onboarding-next {
+  min-width: 96px;
+  justify-content: center;
+}
+
+.nm-onboarding-next--disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Textarea styling */
+
+.nm-input--textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Float animations */
+
+.nm-float-slow {
+  animation: nm-float 4s ease-in-out infinite;
+}
+
+.nm-float-delay {
+  animation: nm-float 4.2s ease-in-out infinite;
+}
+
+/* Slide / fade animations */
+
+@keyframes nm-slide-up {
+  from {
+    transform: translateY(18px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes nm-fade-in-scale {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

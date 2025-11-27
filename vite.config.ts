@@ -14,9 +14,9 @@ export default defineConfig({
         'apple-touch-icon.png',
       ],
       manifest: {
-        name: 'NightShift Housing',
-        short_name: 'NightShift',
-        description: 'Housing built for travel nurses',
+        name: 'Nursery',
+        short_name: 'Nursery',
+        description: 'Stay at ease. Stay with us!',
         theme_color: '#8f63ff',
         background_color: '#e3d4ff',
         display: 'standalone',
