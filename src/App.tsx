@@ -94,14 +94,11 @@ const LISTINGS: Listing[] = [
   },
 ]
 
-type BottomTab = 'home' | 'search' | 'new' | 'saved' | 'profile'
-
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'nurse' | 'host'>('nurse')
   const [activeCategory, setActiveCategory] = useState<
     'housing' | 'hospitals' | 'nurses'
   >('housing')
-  const [activeTab, setActiveTab] = useState<BottomTab>('home')
 
   const [prefs, setPrefs] = useState<OnboardingPrefs | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -113,15 +110,14 @@ const App: React.FC = () => {
   const [contractEnd, setContractEnd] = useState('')
 
   const resultsRef = useRef<HTMLDivElement | null>(null)
-  const searchHeaderRef = useRef<HTMLDivElement | null>(null)
 
-  // ✅ On first load: if no onboarding prefs, show onboarding automatically
+  // Load saved onboarding prefs OR show onboarding for brand-new users
   useEffect(() => {
     const loaded = loadOnboardingPrefs()
     if (!loaded) {
+      // First-time visitor: go straight into travel profile onboarding
       setViewMode('nurse')
       setActiveCategory('nurses')
-      setActiveTab('profile')
       setShowOnboarding(true)
       return
     }
@@ -135,13 +131,14 @@ const App: React.FC = () => {
     setRoomType(mapRoomTypeFromOnboarding(loaded.roomType))
   }, [])
 
-  // if you leave Nurses tab or Nurse view, close onboarding
+  // If you leave Nurses tab, close overlay
   useEffect(() => {
     if (activeCategory !== 'nurses') {
       setShowOnboarding(false)
     }
   }, [activeCategory])
 
+  // If you switch to Host view, close overlay
   useEffect(() => {
     if (viewMode !== 'nurse') {
       setShowOnboarding(false)
@@ -180,15 +177,6 @@ const App: React.FC = () => {
     }
   }
 
-  const handleScrollToSearchBar = () => {
-    if (searchHeaderRef.current) {
-      searchHeaderRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-    }
-  }
-
   const handleClearClick = () => {
     setHospitalOrCity('')
     setMaxBudget(2000)
@@ -203,6 +191,43 @@ const App: React.FC = () => {
   const closeOnboardingAndRefresh = () => {
     const updated = loadOnboardingPrefs()
     if (updated) setPrefs(updated)
+    setShowOnboarding(false)
+  }
+
+  /* ---------- Bottom nav handlers ---------- */
+
+  const handleNavHome = () => {
+    setViewMode('nurse')
+    setActiveCategory('housing')
+    setShowOnboarding(false)
+    // scroll back to top-ish area
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleNavSearchNav = () => {
+    setViewMode('nurse')
+    setActiveCategory('housing')
+    setShowOnboarding(false)
+    // after React re-renders, scroll to results/filters
+    setTimeout(() => {
+      handleSearchClick()
+    }, 0)
+  }
+
+  const handleNavPlus = () => {
+    setViewMode('nurse')
+    setActiveCategory('nurses')
+    setShowOnboarding(true)
+  }
+
+  const handleNavFavorites = () => {
+    // Simple visible feedback for now
+    window.alert('Saved places are coming soon ✨')
+  }
+
+  const handleNavProfile = () => {
+    setViewMode('nurse')
+    setActiveCategory('nurses')
     setShowOnboarding(false)
   }
 
@@ -221,10 +246,7 @@ const App: React.FC = () => {
             <div className="nm-explore-toggle-buttons">
               <button
                 type="button"
-                onClick={() => {
-                  setViewMode('nurse')
-                  setActiveTab('home')
-                }}
+                onClick={() => setViewMode('nurse')}
                 className={
                   'nm-pill ' + (viewMode === 'nurse' ? 'nm-pill--active' : '')
                 }
@@ -234,10 +256,7 @@ const App: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setViewMode('host')
-                  setActiveTab('home')
-                }}
+                onClick={() => setViewMode('host')}
                 className={
                   'nm-pill ' + (viewMode === 'host' ? 'nm-pill--active' : '')
                 }
@@ -273,10 +292,7 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => {
-                  setActiveCategory('housing')
-                  setActiveTab('home')
-                }}
+                onClick={() => setActiveCategory('housing')}
               >
                 <span className="nm-category-emoji">🏠</span>
                 <span className="nm-category-label">Housing</span>
@@ -289,10 +305,7 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => {
-                  setActiveCategory('hospitals')
-                  setActiveTab('home')
-                }}
+                onClick={() => setActiveCategory('hospitals')}
               >
                 <span className="nm-category-emoji">🏥</span>
                 <span className="nm-category-label">Hospitals</span>
@@ -305,10 +318,7 @@ const App: React.FC = () => {
                     ? 'nm-category-item--active'
                     : '')
                 }
-                onClick={() => {
-                  setActiveCategory('nurses')
-                  setActiveTab('profile')
-                }}
+                onClick={() => setActiveCategory('nurses')}
               >
                 <span className="nm-category-emoji">👩‍⚕️</span>
                 <span className="nm-category-label">Nurses</span>
@@ -316,47 +326,10 @@ const App: React.FC = () => {
             </div>
           </NeumoCard>
 
+          {/* MAIN CONTENT */}
           {viewMode === 'nurse' ? (
             activeCategory === 'nurses' ? (
-              showOnboarding ? (
-                <>
-                  <NeumoCard>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="nm-pill"
-                        style={{ fontSize: 12 }}
-                        onClick={closeOnboardingAndRefresh}
-                      >
-                        ← Back to profile
-                      </button>
-                      <button
-                        type="button"
-                        className="nm-pill nm-pill--active"
-                        style={{ fontSize: 12 }}
-                        onClick={closeOnboardingAndRefresh}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </NeumoCard>
-
-                  {/* Full onboarding flow */}
-                  <OnboardingFlow />
-                </>
-              ) : (
-                <NursesTab
-                  prefs={prefs}
-                  onEdit={() => setShowOnboarding(true)}
-                />
-              )
+              <NursesTab prefs={prefs} onEdit={() => setShowOnboarding(true)} />
             ) : (
               <>
                 {/* FILTERS – only for Housing / Hospitals */}
@@ -373,7 +346,7 @@ const App: React.FC = () => {
                         <label className="nm-label">Hospital or city</label>
                         <input
                           className="nm-input"
-                          placeholder="Search by hospital, city, or ZIP"
+                          placeholder="e.g. Swedish Medical Center, Denver"
                           value={hospitalOrCity}
                           onChange={(e) => setHospitalOrCity(e.target.value)}
                         />
@@ -531,29 +504,6 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 </div>
-
-                {/* SAVED TAB PLACEHOLDER */}
-                {activeTab === 'saved' && (
-                  <div style={{ marginTop: 12 }}>
-                    <NeumoCard>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 8,
-                        }}
-                      >
-                        <h3 className="nm-heading-lg" style={{ fontSize: 14 }}>
-                          Saved stays
-                        </h3>
-                        <p className="nm-body" style={{ fontSize: 12 }}>
-                          You don&apos;t have any saved places yet. Tap the ⭐
-                          save buttons on listings to build your shortlist.
-                        </p>
-                      </div>
-                    </NeumoCard>
-                  </div>
-                )}
               </>
             )
           ) : (
@@ -563,91 +513,92 @@ const App: React.FC = () => {
           )}
         </main>
 
-        {/* BOTTOM NAV */}
+        {/* Bottom nav */}
         <nav className="nm-bottom-nav">
-          {/* HOME */}
           <button
+            className="nm-bottom-icon nm-bottom-icon--active"
             type="button"
-            className={
-              'nm-bottom-icon ' +
-              (activeTab === 'home' ? 'nm-bottom-icon--active' : '')
-            }
-            onClick={() => {
-              setViewMode('nurse')
-              setActiveCategory('housing')
-              setActiveTab('home')
-              handleScrollToSearchBar()
-            }}
+            onClick={handleNavHome}
           >
             🏠
           </button>
-
-          {/* SEARCH (scroll to search/filter area) */}
           <button
+            className="nm-bottom-icon"
             type="button"
-            className={
-              'nm-bottom-icon ' +
-              (activeTab === 'search' ? 'nm-bottom-icon--active' : '')
-            }
-            onClick={() => {
-              setViewMode('nurse')
-              setActiveCategory('housing')
-              setActiveTab('search')
-              handleScrollToSearchBar()
-            }}
+            onClick={handleNavSearchNav}
           >
             🔍
           </button>
-
-          {/* PLUS = quick new flow → open onboarding in Nurses profile */}
           <button
-            type="button"
             className="nm-bottom-fab nm-bounce"
-            onClick={() => {
-              setViewMode('nurse')
-              setActiveCategory('nurses')
-              setActiveTab('new')
-              setShowOnboarding(true)
-            }}
+            type="button"
+            onClick={handleNavPlus}
           >
             +
           </button>
-
-          {/* SAVED */}
           <button
+            className="nm-bottom-icon"
             type="button"
-            className={
-              'nm-bottom-icon ' +
-              (activeTab === 'saved' ? 'nm-bottom-icon--active' : '')
-            }
-            onClick={() => {
-              setViewMode('nurse')
-              setActiveCategory('housing')
-              setActiveTab('saved')
-            }}
+            onClick={handleNavFavorites}
           >
             ❤️
           </button>
-
-          {/* PROFILE (Nurse prefs) */}
           <button
+            className="nm-bottom-icon"
             type="button"
-            className={
-              'nm-bottom-icon ' +
-              (activeTab === 'profile' ? 'nm-bottom-icon--active' : '')
-            }
-            onClick={() => {
-              setViewMode('nurse')
-              setActiveCategory('nurses')
-              setActiveTab('profile')
-              if (!prefs) {
-                setShowOnboarding(true)
-              }
-            }}
+            onClick={handleNavProfile}
           >
             👤
           </button>
         </nav>
+
+        {/* FULL-SCREEN ONBOARDING OVERLAY */}
+        {showOnboarding && (
+          <div className="nm-onboarding-overlay">
+            <NeumoCard className="nm-onboarding-panel">
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                  gap: 8,
+                }}
+              >
+                <h2 className="nm-heading-lg" style={{ fontSize: 18 }}>
+                  Set up your travel profile
+                </h2>
+                <button
+                  type="button"
+                  className="nm-pill"
+                  style={{ fontSize: 11 }}
+                  onClick={closeOnboardingAndRefresh}
+                >
+                  Skip for now
+                </button>
+              </div>
+
+              <OnboardingFlow />
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginTop: 14,
+                }}
+              >
+                <button
+                  type="button"
+                  className="nm-pill nm-pill--active"
+                  style={{ fontSize: 13 }}
+                  onClick={closeOnboardingAndRefresh}
+                >
+                  Save &amp; close
+                </button>
+              </div>
+            </NeumoCard>
+          </div>
+        )}
       </div>
     </div>
   )
