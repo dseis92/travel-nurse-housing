@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { OnboardingFlow } from './onboarding/OnboardingFlow'
-import { NeumoCard, PillButton } from './neumo/NeumoKit'
+import { NeumoCard } from './neumo/NeumoKit'
 import { HostDashboard } from './HostDashboard'
 import { SearchFlow, type SearchFlowResult } from './search/SearchFlow'
 
@@ -22,6 +22,7 @@ type Listing = {
   perks: string[]
   rating?: number
   reviewCount?: number
+  section: string
 }
 
 type OnboardingPrefs = {
@@ -56,9 +57,129 @@ function mapRoomTypeFromOnboarding(
   return 'any'
 }
 
+/** Demo listings so feed feels like Airbnb */
 const LISTINGS: Listing[] = [
+  // -------- Minneapolis: Popular homes --------
   {
     id: 1,
+    title: 'Place to stay in Whittier',
+    city: 'Minneapolis',
+    state: 'MN',
+    hospitalName: 'Abbott Northwestern Hospital',
+    hospitalCity: 'Minneapolis',
+    hospitalState: 'MN',
+    minutesToHospital: 8,
+    pricePerMonth: 2400,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
+    tags: ['Guest favorite', '2 nights min', 'Self check-in'],
+    perks: ['Fast Wi-Fi', 'Free parking'],
+    rating: 4.92,
+    reviewCount: 128,
+    section: 'Popular homes in Minneapolis',
+  },
+  {
+    id: 2,
+    title: 'Home in Minneapolis',
+    city: 'Minneapolis',
+    state: 'MN',
+    hospitalName: 'Hennepin County Medical Center',
+    hospitalCity: 'Minneapolis',
+    hospitalState: 'MN',
+    minutesToHospital: 10,
+    pricePerMonth: 2600,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/1396125/pexels-photo-1396125.jpeg',
+    tags: ['Bright & modern', 'Dedicated workspace'],
+    perks: ['Washer / dryer'],
+    rating: 4.76,
+    reviewCount: 86,
+    section: 'Popular homes in Minneapolis',
+  },
+  {
+    id: 3,
+    title: 'Cozy walk-up near U of M',
+    city: 'Minneapolis',
+    state: 'MN',
+    hospitalName: 'M Health Fairview University',
+    hospitalCity: 'Minneapolis',
+    hospitalState: 'MN',
+    minutesToHospital: 12,
+    pricePerMonth: 2200,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/259580/pexels-photo-259580.jpeg',
+    tags: ['Near light rail', 'Private balcony'],
+    perks: ['Garage parking'],
+    rating: 4.88,
+    reviewCount: 64,
+    section: 'Popular homes in Minneapolis',
+  },
+
+  // -------- Milwaukee: Available this weekend --------
+  {
+    id: 4,
+    title: 'Room in Avenues West',
+    city: 'Milwaukee',
+    state: 'WI',
+    hospitalName: 'Froedtert Hospital',
+    hospitalCity: 'Milwaukee',
+    hospitalState: 'WI',
+    minutesToHospital: 6,
+    pricePerMonth: 1550,
+    roomType: 'private-room',
+    imageUrl:
+      'https://images.pexels.com/photos/1454806/pexels-photo-1454806.jpeg',
+    tags: ['Private room', 'Shared kitchen'],
+    perks: ['Street parking'],
+    rating: 4.85,
+    reviewCount: 64,
+    section: 'Available in Milwaukee this weekend',
+  },
+  {
+    id: 5,
+    title: 'Apartment in Milwaukee',
+    city: 'Milwaukee',
+    state: 'WI',
+    hospitalName: 'Aurora St. Luke’s',
+    hospitalCity: 'Milwaukee',
+    hospitalState: 'WI',
+    minutesToHospital: 9,
+    pricePerMonth: 1900,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg',
+    tags: ['Guest favorite', 'City view'],
+    perks: ['Garage parking'],
+    rating: 4.83,
+    reviewCount: 72,
+    section: 'Available in Milwaukee this weekend',
+  },
+  {
+    id: 6,
+    title: 'Sunlit loft near lakefront',
+    city: 'Milwaukee',
+    state: 'WI',
+    hospitalName: 'Children’s Wisconsin',
+    hospitalCity: 'Milwaukee',
+    hospitalState: 'WI',
+    minutesToHospital: 11,
+    pricePerMonth: 2100,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
+    tags: ['Walk to lake', 'In-unit laundry'],
+    perks: ['Fast Wi-Fi'],
+    rating: 4.9,
+    reviewCount: 39,
+    section: 'Available in Milwaukee this weekend',
+  },
+
+  // -------- Wausau: nurse-favorite --------
+  {
+    id: 7,
     title: "Quiet studio 5 min from St. Mary's",
     city: 'Wausau',
     state: 'WI',
@@ -74,9 +195,10 @@ const LISTINGS: Listing[] = [
     perks: ['Fast Wi-Fi', 'Parking'],
     rating: 4.9,
     reviewCount: 23,
+    section: 'Nurse-favorite stays in Wausau',
   },
   {
-    id: 2,
+    id: 8,
     title: 'Private room in nurse house',
     city: 'Wausau',
     state: 'WI',
@@ -92,11 +214,173 @@ const LISTINGS: Listing[] = [
     perks: ['Weekly cleaning'],
     rating: 4.8,
     reviewCount: 41,
+    section: 'Nurse-favorite stays in Wausau',
+  },
+
+  // -------- Green Bay --------
+  {
+    id: 9,
+    title: 'Townhome near Bellin Hospital',
+    city: 'Green Bay',
+    state: 'WI',
+    hospitalName: 'Bellin Hospital',
+    hospitalCity: 'Green Bay',
+    hospitalState: 'WI',
+    minutesToHospital: 6,
+    pricePerMonth: 2100,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/259580/pexels-photo-259580.jpeg',
+    tags: ['Driveway parking', 'Backyard'],
+    perks: ['Pet friendly'],
+    rating: 4.7,
+    reviewCount: 31,
+    section: 'Stay in Green Bay',
+  },
+  {
+    id: 10,
+    title: 'Basement suite for night shifters',
+    city: 'Green Bay',
+    state: 'WI',
+    hospitalName: 'St. Vincent Hospital',
+    hospitalCity: 'Green Bay',
+    hospitalState: 'WI',
+    minutesToHospital: 9,
+    pricePerMonth: 1400,
+    roomType: 'private-room',
+    imageUrl:
+      'https://images.pexels.com/photos/751204/pexels-photo-751204.jpeg',
+    tags: ['Blackout curtains', 'Quiet hours enforced'],
+    perks: ['Off-street parking'],
+    rating: 4.82,
+    reviewCount: 45,
+    section: 'Stay in Green Bay',
+  },
+
+  // -------- Madison --------
+  {
+    id: 11,
+    title: 'Capitol view studio',
+    city: 'Madison',
+    state: 'WI',
+    hospitalName: 'UW Health University Hospital',
+    hospitalCity: 'Madison',
+    hospitalState: 'WI',
+    minutesToHospital: 12,
+    pricePerMonth: 2300,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg',
+    tags: ['Walkable', 'City view'],
+    perks: ['In-building gym'],
+    rating: 4.9,
+    reviewCount: 52,
+    section: 'Stays near Madison hospitals',
+  },
+  {
+    id: 12,
+    title: 'Room in shared nurse flat',
+    city: 'Madison',
+    state: 'WI',
+    hospitalName: 'SSM Health St. Mary’s',
+    hospitalCity: 'Madison',
+    hospitalState: 'WI',
+    minutesToHospital: 8,
+    pricePerMonth: 1250,
+    roomType: 'private-room',
+    imageUrl:
+      'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg',
+    tags: ['Nurses only', 'All-female household'],
+    perks: ['Fast Wi-Fi'],
+    rating: 4.78,
+    reviewCount: 29,
+    section: 'Stays near Madison hospitals',
+  },
+
+  // -------- Chicago --------
+  {
+    id: 13,
+    title: 'High-rise studio near Rush',
+    city: 'Chicago',
+    state: 'IL',
+    hospitalName: 'Rush University Medical Center',
+    hospitalCity: 'Chicago',
+    hospitalState: 'IL',
+    minutesToHospital: 7,
+    pricePerMonth: 3200,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/439227/pexels-photo-439227.jpeg',
+    tags: ['Downtown', '24/7 concierge'],
+    perks: ['Gym & pool'],
+    rating: 4.88,
+    reviewCount: 91,
+    section: 'Longer stays in Chicago',
+  },
+  {
+    id: 14,
+    title: 'Garden unit near Loyola',
+    city: 'Chicago',
+    state: 'IL',
+    hospitalName: 'Loyola University Medical Center',
+    hospitalCity: 'Maywood',
+    hospitalState: 'IL',
+    minutesToHospital: 16,
+    pricePerMonth: 2100,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/259580/pexels-photo-259580.jpeg',
+    tags: ['Quiet neighborhood', 'On-site laundry'],
+    perks: ['Street parking'],
+    rating: 4.7,
+    reviewCount: 38,
+    section: 'Longer stays in Chicago',
+  },
+
+  // -------- Denver --------
+  {
+    id: 15,
+    title: 'Studio near Swedish Medical Center',
+    city: 'Englewood',
+    state: 'CO',
+    hospitalName: 'Swedish Medical Center',
+    hospitalCity: 'Englewood',
+    hospitalState: 'CO',
+    minutesToHospital: 4,
+    pricePerMonth: 2450,
+    roomType: 'entire-place',
+    imageUrl:
+      'https://images.pexels.com/photos/439391/pexels-photo-439391.jpeg',
+    tags: ['Walk to hospital', 'Mountain views'],
+    perks: ['Garage parking', 'Fast Wi-Fi'],
+    rating: 4.93,
+    reviewCount: 57,
+    section: 'Stays around Denver metro',
+  },
+  {
+    id: 16,
+    title: 'Shared house near UCHealth',
+    city: 'Aurora',
+    state: 'CO',
+    hospitalName:
+      'UCHealth University of Colorado Hospital',
+    hospitalCity: 'Aurora',
+    hospitalState: 'CO',
+    minutesToHospital: 9,
+    pricePerMonth: 1350,
+    roomType: 'private-room',
+    imageUrl:
+      'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg',
+    tags: ['Nurses only', 'Backyard'],
+    perks: ['Driveway parking'],
+    rating: 4.8,
+    reviewCount: 34,
+    section: 'Stays around Denver metro',
   },
 ]
 
 const App: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'nurse' | 'host'>('nurse')
+  const [currentRole, setCurrentRole] = useState<'nurse' | 'host' | null>(null)
   const [activeCategory, setActiveCategory] = useState<
     'housing' | 'hospitals' | 'nurses'
   >('housing')
@@ -105,7 +389,7 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   const [hospitalOrCity, setHospitalOrCity] = useState('')
-  const [maxBudget, setMaxBudget] = useState<number | ''>(2000)
+  const [maxBudget, setMaxBudget] = useState<number | ''>(4000)
   const [roomType, setRoomType] = useState<RoomTypeFilter>('any')
   const [contractStart, setContractStart] = useState('')
   const [contractEnd, setContractEnd] = useState('')
@@ -133,30 +417,25 @@ const App: React.FC = () => {
     }
   }, [activeCategory])
 
-  useEffect(() => {
-    if (viewMode !== 'nurse') {
-      setShowOnboarding(false)
-    }
-  }, [viewMode])
-
   const filteredListings = useMemo(() => {
-    return LISTINGS.filter((listing) => {
-      const matchesLocation =
-        !hospitalOrCity.trim() ||
-        listing.hospitalName
-          .toLowerCase()
-          .includes(hospitalOrCity.toLowerCase()) ||
-        listing.city.toLowerCase().includes(hospitalOrCity.toLowerCase())
+    // For now: ALWAYS show all demo listings,
+    // ignore filters so feed is never empty.
+    return LISTINGS
+  }, [hospitalOrCity, maxBudget, roomType, contractStart, contractEnd])
 
-      const matchesBudget =
-        maxBudget === '' || listing.pricePerMonth <= maxBudget
-
-      const matchesRoomType =
-        roomType === 'any' ? true : listing.roomType === roomType
-
-      return matchesLocation && matchesBudget && matchesRoomType
-    })
-  }, [hospitalOrCity, maxBudget, roomType])
+  const groupedListings = useMemo(() => {
+    const map = new Map<string, Listing[]>()
+    for (const l of filteredListings) {
+      const key = l.section || 'Stays for you'
+      const arr = map.get(key) ?? []
+      arr.push(l)
+      map.set(key, arr)
+    }
+    return Array.from(map.entries()).map(([title, items]) => ({
+      title,
+      items,
+    }))
+  }, [filteredListings])
 
   const listingCountText =
     filteredListings.length === 0
@@ -184,23 +463,96 @@ const App: React.FC = () => {
     }
   }
 
-  const handleClearClick = () => {
-    setHospitalOrCity('')
-    setMaxBudget(2000)
-    setRoomType('any')
-    setContractStart('')
-    setContractEnd('')
-  }
-
-  const showFilters =
-    activeCategory === 'housing' || activeCategory === 'hospitals'
-
   const closeOnboardingAndRefresh = () => {
     const updated = loadOnboardingPrefs()
     if (updated) setPrefs(updated)
     setShowOnboarding(false)
   }
 
+  // WHO'S SIGNING IN
+  if (currentRole === null) {
+    return (
+      <div className="nm-shell">
+        <div className="nm-phone">
+          <main className="nm-screen-content nm-fade-in">
+            <NeumoCard className="nm-explore-header">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      textTransform: 'uppercase',
+                      letterSpacing: 1,
+                      color: '#9ca3af',
+                      marginBottom: 4,
+                    }}
+                  >
+                    NightShift Housing
+                  </div>
+                  <h1
+                    className="nm-heading-lg"
+                    style={{ fontSize: 22, marginBottom: 4 }}
+                  >
+                    Who&apos;s signing in?
+                  </h1>
+                  <p className="nm-body" style={{ fontSize: 13 }}>
+                    Choose your role to see the right dashboard and tools.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="nm-pill nm-pill--active"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingInline: 18,
+                    fontSize: 14,
+                  }}
+                  onClick={() => setCurrentRole('nurse')}
+                >
+                  <span>👩‍⚕️ I&apos;m a travel nurse</span>
+                  <span style={{ fontSize: 16 }}>→</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="nm-pill"
+                  style={{
+                    width: '100%',
+                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingInline: 18,
+                    fontSize: 14,
+                  }}
+                  onClick={() => setCurrentRole('host')}
+                >
+                  <span>🏡 I&apos;m a host</span>
+                  <span style={{ fontSize: 16 }}>→</span>
+                </button>
+
+                <p
+                  className="nm-body"
+                  style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}
+                >
+                  You can switch between Nurse and Host anytime from the profile
+                  tab.
+                </p>
+              </div>
+            </NeumoCard>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  // At this point TS knows currentRole is 'nurse' | 'host', but we assert it
+  const viewMode = currentRole as 'nurse' | 'host'
+
+  // MAIN APP
   return (
     <div className="nm-shell">
       {isSearchFlowOpen && (
@@ -316,142 +668,8 @@ const App: React.FC = () => {
               )
             ) : (
               <>
-                {showFilters && (
-                  <NeumoCard>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 10,
-                      }}
-                    >
-                      <div className="nm-field-group">
-                        <label className="nm-label">Hospital or city</label>
-                        <input
-                          className="nm-input"
-                          placeholder="e.g. Swedish Medical Center, Denver"
-                          value={hospitalOrCity}
-                          onChange={(e) => setHospitalOrCity(e.target.value)}
-                        />
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 10,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div className="nm-field-group" style={{ flex: 1 }}>
-                          <label className="nm-label">
-                            Max monthly budget
-                          </label>
-                          <input
-                            className="nm-input"
-                            inputMode="numeric"
-                            value={maxBudget === '' ? '' : String(maxBudget)}
-                            onChange={(e) => {
-                              const v = e.target.value.replace(/[^\d]/g, '')
-                              setMaxBudget(v ? Number(v) : '')
-                            }}
-                          />
-                        </div>
-                        <div className="nm-field-group" style={{ flex: 1 }}>
-                          <label className="nm-label">Room type</label>
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: 6,
-                              flexWrap: 'wrap',
-                            }}
-                          >
-                            <PillButton
-                              label="Any"
-                              active={roomType === 'any'}
-                              onClick={() => setRoomType('any')}
-                            />
-                            <PillButton
-                              label="Private room"
-                              active={roomType === 'private-room'}
-                              onClick={() => setRoomType('private-room')}
-                            />
-                            <PillButton
-                              label="Entire place"
-                              active={roomType === 'entire-place'}
-                              onClick={() => setRoomType('entire-place')}
-                            />
-                            <PillButton
-                              label="Shared room"
-                              active={roomType === 'shared'}
-                              onClick={() => setRoomType('shared')}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 10,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div className="nm-field-group" style={{ flex: 1 }}>
-                          <label className="nm-label">Contract start</label>
-                          <input
-                            type="date"
-                            className="nm-input"
-                            value={contractStart}
-                            onChange={(e) => setContractStart(e.target.value)}
-                          />
-                        </div>
-                        <div className="nm-field-group" style={{ flex: 1 }}>
-                          <label className="nm-label">Contract end</label>
-                          <input
-                            type="date"
-                            className="nm-input"
-                            value={contractEnd}
-                            onChange={(e) => setContractEnd(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 10,
-                          marginTop: 4,
-                        }}
-                      >
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            type="button"
-                            className="nm-bottom-fab nm-bounce"
-                            style={{ width: 52, height: 52, fontSize: 11 }}
-                            onClick={handleSearchPillClick}
-                          >
-                            🔍
-                          </button>
-                          <button
-                            type="button"
-                            className="nm-pill"
-                            style={{ fontSize: 12 }}
-                            onClick={handleClearClick}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                        <p className="nm-body" style={{ fontSize: 11 }}>
-                          Showing live matches from trusted nurse hosts.
-                        </p>
-                      </div>
-                    </div>
-                  </NeumoCard>
-                )}
-
-                <div style={{ marginTop: 10 }} ref={resultsRef}>
+                {/* RESULTS FEED */}
+                <div style={{ marginTop: 16 }} ref={resultsRef}>
                   <div
                     style={{
                       display: 'flex',
@@ -472,19 +690,29 @@ const App: React.FC = () => {
                     </button>
                   </div>
 
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
-                  >
-                    {filteredListings.map((listing) => (
-                      <NeumoCard key={listing.id}>
-                        <ListingCard listing={listing} />
-                      </NeumoCard>
-                    ))}
-                  </div>
+                  {groupedListings.map((group) => (
+                    <section key={group.title} style={{ marginBottom: 18 }}>
+                      <h2
+                        className="nm-heading-lg"
+                        style={{ fontSize: 16, marginBottom: 8 }}
+                      >
+                        {group.title}
+                      </h2>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10,
+                        }}
+                      >
+                        {group.items.map((listing) => (
+                          <NeumoCard key={listing.id}>
+                            <ListingCard listing={listing} />
+                          </NeumoCard>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
                 </div>
               </>
             )
@@ -496,7 +724,10 @@ const App: React.FC = () => {
         </main>
 
         <nav className="nm-bottom-nav">
-          <button className="nm-bottom-icon nm-bottom-icon--active" type="button">
+          <button
+            className="nm-bottom-icon nm-bottom-icon--active"
+            type="button"
+          >
             🏠
           </button>
           <button
@@ -509,7 +740,11 @@ const App: React.FC = () => {
           <button className="nm-bottom-icon" type="button">
             ❤️
           </button>
-          <button className="nm-bottom-icon" type="button">
+          <button
+            className="nm-bottom-icon"
+            type="button"
+            onClick={() => setCurrentRole(null)}
+          >
             👤
           </button>
         </nav>
@@ -523,24 +758,60 @@ const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
     <div
       style={{
         display: 'flex',
-        gap: 12,
+        flexDirection: 'column',
+        gap: 8,
       }}
     >
       <div
         style={{
-          width: 72,
-          height: 72,
-          borderRadius: 24,
+          borderRadius: 26,
+          overflow: 'hidden',
+          height: 180,
           backgroundImage: `url(${listing.imageUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          flexShrink: 0,
+          position: 'relative',
         }}
-      />
-      <div style={{ flex: 1 }}>
+      >
+        {listing.rating && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 11,
+              fontWeight: 600,
+            }}
+          >
+            Guest favorite
+          </div>
+        )}
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            width: 30,
+            height: 30,
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 16,
+          }}
+        >
+          🤍
+        </div>
+      </div>
+
+      <div>
         <h3
           className="nm-heading-lg"
-          style={{ fontSize: 14, marginBottom: 4 }}
+          style={{ fontSize: 14, marginBottom: 2 }}
         >
           {listing.title}
         </h3>
@@ -555,6 +826,13 @@ const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
             ? 'Private room'
             : 'Shared room'}
         </p>
+        <p
+          className="nm-body"
+          style={{ fontSize: 11, marginTop: 4, fontWeight: 600 }}
+        >
+          ${listing.pricePerMonth.toLocaleString()} / month
+        </p>
+
         <div
           style={{
             display: 'flex',
@@ -569,41 +847,6 @@ const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
             </span>
           ))}
         </div>
-      </div>
-      <div
-        style={{
-          textAlign: 'right',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: 14,
-            }}
-          >
-            ${listing.pricePerMonth.toLocaleString()}
-          </span>
-          <span
-            style={{
-              display: 'block',
-              fontSize: 11,
-              color: '#6b7280',
-            }}
-          >
-            / month
-          </span>
-        </div>
-        <button
-          type="button"
-          className="nm-pill"
-          style={{ fontSize: 11, alignSelf: 'flex-end' }}
-        >
-          View
-        </button>
       </div>
     </div>
   )
