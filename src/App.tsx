@@ -362,8 +362,7 @@ const LISTINGS: Listing[] = [
     title: 'Shared house near UCHealth',
     city: 'Aurora',
     state: 'CO',
-    hospitalName:
-      'UCHealth University of Colorado Hospital',
+    hospitalName: 'UCHealth University of Colorado Hospital',
     hospitalCity: 'Aurora',
     hospitalState: 'CO',
     minutesToHospital: 9,
@@ -396,6 +395,13 @@ const App: React.FC = () => {
 
   const [isSearchFlowOpen, setIsSearchFlowOpen] = useState(false)
 
+  // Favorites + bottom tab state
+  const [favorites, setFavorites] = useState<number[]>([])
+  const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'favorites'>(
+    'home',
+  )
+
+  // selected listing for detail modal
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
 
   const resultsRef = useRef<HTMLDivElement | null>(null)
@@ -419,15 +425,54 @@ const App: React.FC = () => {
     }
   }, [activeCategory])
 
+  // FILTERED LISTINGS (never returns an empty list – falls back to all)
   const filteredListings = useMemo(() => {
-    // For now: ALWAYS show all demo listings,
-    // ignore filters so feed is never empty.
-    return LISTINGS
+    let next = LISTINGS
+
+    const q = hospitalOrCity.trim().toLowerCase()
+    if (q) {
+      next = next.filter((l) => {
+        const city = l.city.toLowerCase()
+        const state = l.state.toLowerCase()
+        const hospital = l.hospitalName.toLowerCase()
+        const cityState = `${l.city}, ${l.state}`.toLowerCase()
+        return (
+          city.includes(q) ||
+          state.includes(q) ||
+          hospital.includes(q) ||
+          cityState.includes(q)
+        )
+      })
+    }
+
+    if (typeof maxBudget === 'number') {
+      next = next.filter((l) => l.pricePerMonth <= maxBudget)
+    }
+
+    if (roomType !== 'any') {
+      next = next.filter((l) => l.roomType === roomType)
+    }
+
+    // if filters wipe everything out, show all listings instead of empty
+    if (next.length === 0) {
+      return LISTINGS
+    }
+
+    return next
   }, [hospitalOrCity, maxBudget, roomType, contractStart, contractEnd])
+
+  // Listings actually shown, depending on bottom tab (All vs Favorites)
+  const displayedListings = useMemo(() => {
+    if (activeBottomTab === 'favorites') {
+      if (favorites.length === 0) return []
+      return filteredListings.filter((l) => favorites.includes(l.id))
+    }
+    return filteredListings
+  }, [filteredListings, favorites, activeBottomTab])
 
   const groupedListings = useMemo(() => {
     const map = new Map<string, Listing[]>()
-    for (const l of filteredListings) {
+    for (const l of displayedListings) {
       const key = l.section || 'Stays for you'
       const arr = map.get(key) ?? []
       arr.push(l)
@@ -437,14 +482,16 @@ const App: React.FC = () => {
       title,
       items,
     }))
-  }, [filteredListings])
+  }, [displayedListings])
 
   const listingCountText =
-    filteredListings.length === 0
+    activeBottomTab === 'favorites' && displayedListings.length === 0
+      ? 'You haven’t saved any favorites yet.'
+      : displayedListings.length === 0
       ? 'No places found yet — try widening your filters.'
-      : filteredListings.length === 1
+      : displayedListings.length === 1
       ? '1 place that matches your filters'
-      : `${filteredListings.length} places that match your filters`
+      : `${displayedListings.length} places that match your filters`
 
   const handleSearchPillClick = () => {
     setIsSearchFlowOpen(true)
@@ -469,6 +516,20 @@ const App: React.FC = () => {
     const updated = loadOnboardingPrefs()
     if (updated) setPrefs(updated)
     setShowOnboarding(false)
+  }
+
+  const handleToggleFavorite = (id: number) => {
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  const handleOpenListing = (listing: Listing) => {
+    setSelectedListing(listing)
+  }
+
+  const handleCloseListing = () => {
+    setSelectedListing(null)
   }
 
   // WHO'S SIGNING IN
@@ -551,7 +612,7 @@ const App: React.FC = () => {
     )
   }
 
-  // At this point TS knows currentRole is 'nurse' | 'host', but we assert it
+  // At this point TS knows currentRole is 'nurse' | 'host'
   const viewMode = currentRole as 'nurse' | 'host'
 
   // MAIN APP
@@ -567,10 +628,13 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* Listing detail modal */}
       {selectedListing && (
         <ListingDetailModal
           listing={selectedListing}
-          onClose={() => setSelectedListing(null)}
+          onClose={handleCloseListing}
+          isFavorite={favorites.includes(selectedListing.id)}
+          onToggleFavorite={() => handleToggleFavorite(selectedListing.id)}
         />
       )}
 
@@ -581,7 +645,10 @@ const App: React.FC = () => {
             <button
               type="button"
               className="nm-search-pill"
-              onClick={handleSearchPillClick}
+              onClick={() => {
+                setActiveBottomTab('home')
+                handleSearchPillClick()
+              }}
             >
               <span className="nm-search-icon">🔍</span>
               <div className="nm-search-text">
@@ -699,6 +766,18 @@ const App: React.FC = () => {
                     </button>
                   </div>
 
+                  {activeBottomTab === 'favorites' &&
+                    displayedListings.length === 0 && (
+                      <NeumoCard>
+                        <p
+                          className="nm-body"
+                          style={{ fontSize: 12, textAlign: 'center' }}
+                        >
+                          Tap the heart on any place to save it here.
+                        </p>
+                      </NeumoCard>
+                    )}
+
                   {groupedListings.map((group) => (
                     <section key={group.title} style={{ marginBottom: 18 }}>
                       <h2
@@ -718,7 +797,11 @@ const App: React.FC = () => {
                           <NeumoCard key={listing.id}>
                             <ListingCard
                               listing={listing}
-                              onSelect={setSelectedListing}
+                              isFavorite={favorites.includes(listing.id)}
+                              onToggleFavorite={() =>
+                                handleToggleFavorite(listing.id)
+                              }
+                              onOpen={() => handleOpenListing(listing)}
                             />
                           </NeumoCard>
                         ))}
@@ -737,25 +820,44 @@ const App: React.FC = () => {
 
         <nav className="nm-bottom-nav">
           <button
-            className="nm-bottom-icon nm-bottom-icon--active"
+            className={
+              'nm-bottom-icon ' +
+              (activeBottomTab === 'home' ? 'nm-bottom-icon--active' : '')
+            }
             type="button"
+            onClick={() => setActiveBottomTab('home')}
           >
             🏠
           </button>
           <button
             className="nm-bottom-icon"
             type="button"
-            onClick={handleSearchPillClick}
+            onClick={() => {
+              setActiveBottomTab('home')
+              handleSearchPillClick()
+            }}
           >
             🔍
           </button>
-          <button className="nm-bottom-icon" type="button">
+          <button
+            className={
+              'nm-bottom-icon ' +
+              (activeBottomTab === 'favorites'
+                ? 'nm-bottom-icon--active'
+                : '')
+            }
+            type="button"
+            onClick={() => setActiveBottomTab('favorites')}
+          >
             ❤️
           </button>
           <button
             className="nm-bottom-icon"
             type="button"
-            onClick={() => setCurrentRole(null)}
+            onClick={() => {
+              setActiveBottomTab('home')
+              setCurrentRole(null)
+            }}
           >
             👤
           </button>
@@ -767,12 +869,14 @@ const App: React.FC = () => {
 
 const ListingCard: React.FC<{
   listing: Listing
-  onSelect: (listing: Listing) => void
-}> = ({ listing, onSelect }) => {
+  isFavorite: boolean
+  onToggleFavorite: () => void
+  onOpen: () => void
+}> = ({ listing, isFavorite, onToggleFavorite, onOpen }) => {
   return (
     <button
       type="button"
-      onClick={() => onSelect(listing)}
+      onClick={onOpen}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -811,7 +915,12 @@ const ListingCard: React.FC<{
             Guest favorite
           </div>
         )}
-        <div
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite()
+          }}
           style={{
             position: 'absolute',
             top: 10,
@@ -819,15 +928,29 @@ const ListingCard: React.FC<{
             width: 30,
             height: 30,
             borderRadius: 999,
-            background: 'rgba(255,255,255,0.9)',
+            border: 'none',
+            cursor: 'pointer',
+            background: isFavorite
+              ? 'linear-gradient(135deg, #ff66c4, #ff9f4c)'
+              : 'rgba(255,255,255,0.9)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: 16,
+            boxShadow: isFavorite
+              ? '0 8px 18px rgba(255,102,196,0.4)'
+              : '0 8px 18px rgba(0,0,0,0.12)',
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
           }}
         >
-          🤍
-        </div>
+          <span
+            style={{
+              transform: isFavorite ? 'scale(1.05)' : 'scale(1)',
+            }}
+          >
+            {isFavorite ? '💜' : '🤍'}
+          </span>
+        </button>
       </div>
 
       <div>
@@ -871,6 +994,591 @@ const ListingCard: React.FC<{
         </div>
       </div>
     </button>
+  )
+}
+
+const ListingDetailModal: React.FC<{
+  listing: Listing
+  isFavorite: boolean
+  onToggleFavorite: () => void
+  onClose: () => void
+}> = ({ listing, isFavorite, onToggleFavorite, onClose }) => {
+  const roomLabel =
+    listing.roomType === 'entire-place'
+      ? 'Entire place'
+      : listing.roomType === 'private-room'
+      ? 'Private room'
+      : 'Shared room'
+
+  // Local state for enter/exit animation
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    // kick off enter animation on mount
+    setIsVisible(true)
+  }, [])
+
+  const handleRequestClose = () => {
+    // play exit animation, then call parent onClose
+    setIsVisible(false)
+    setTimeout(() => {
+      onClose()
+    }, 220)
+  }
+
+  return (
+    <div
+      onClick={handleRequestClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15,23,42,0.55)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+        zIndex: 50,
+        opacity: isVisible ? 1 : 0,
+        transition: 'opacity 0.22s ease-out',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          maxHeight: '90vh',
+          background:
+            'radial-gradient(circle at top, #fdf2ff 0, #f9fafb 35%, #eef2ff 100%)',
+          borderRadius: 32,
+          overflow: 'hidden',
+          boxShadow: '0 24px 60px rgba(15,23,42,0.4)',
+          display: 'flex',
+          flexDirection: 'column',
+          transform: isVisible
+            ? 'translateY(0px) scale(1)'
+            : 'translateY(24px) scale(0.96)',
+          opacity: isVisible ? 1 : 0.4,
+          transition:
+            'transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.24s ease-out',
+        }}
+      >
+        {/* Image */}
+        <div
+          style={{
+            position: 'relative',
+            height: 220,
+            backgroundImage: `url(${listing.imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleRequestClose}
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              borderRadius: 999,
+              border: 'none',
+              padding: '6px 10px',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              background: 'rgba(15,23,42,0.75)',
+              color: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            ← Back
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              border: 'none',
+              cursor: 'pointer',
+              background: isFavorite
+                ? 'linear-gradient(135deg, #ff66c4, #ff9f4c)'
+                : 'rgba(255,255,255,0.95)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              boxShadow: isFavorite
+                ? '0 10px 24px rgba(255,102,196,0.45)'
+                : '0 10px 24px rgba(15,23,42,0.3)',
+            }}
+          >
+            {isFavorite ? '💜' : '🤍'}
+          </button>
+
+          {listing.rating && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 12,
+                left: 12,
+                padding: '6px 12px',
+                borderRadius: 999,
+                background: 'rgba(15,23,42,0.85)',
+                color: 'white',
+                fontSize: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span>⭐ {listing.rating.toFixed(2)}</span>
+              {listing.reviewCount && (
+                <span style={{ opacity: 0.85 }}>
+                  ({listing.reviewCount} reviews)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div
+          style={{
+            padding: 18,
+            paddingBottom: 12,
+            overflowY: 'auto',
+          }}
+        >
+          <h2
+            className="nm-heading-lg"
+            style={{ fontSize: 18, marginBottom: 4 }}
+          >
+            {listing.title}
+          </h2>
+          <p className="nm-body" style={{ fontSize: 12, marginBottom: 4 }}>
+            {listing.city}, {listing.state} · {roomLabel}
+          </p>
+          <p className="nm-body" style={{ fontSize: 12, marginBottom: 10 }}>
+            ~{listing.minutesToHospital} min to {listing.hospitalName}
+          </p>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              marginBottom: 12,
+            }}
+          >
+            {listing.tags.map((tag) => (
+              <span key={tag} className="nm-tag">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* Price block */}
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 18,
+              background: 'rgba(255,255,255,0.9)',
+              boxShadow:
+                '0 12px 24px rgba(148,163,184,0.28), -4px -4px 12px rgba(255,255,255,0.9)',
+              marginBottom: 14,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: 6,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 20,
+                  fontWeight: 700,
+                }}
+              >
+                ${listing.pricePerMonth.toLocaleString()}
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: '#6b7280',
+                }}
+              >
+                / month · no extra fees
+              </span>
+            </div>
+            <p
+              className="nm-body"
+              style={{
+                fontSize: 11,
+                color: '#4b5563',
+              }}
+            >
+              Perfect for 13-week contracts. Ask the host about flexible
+              extensions or shorter stays.
+            </p>
+          </div>
+
+          {/* Amenities grid */}
+          <div style={{ marginBottom: 14 }}>
+            <h3
+              className="nm-heading-lg"
+              style={{ fontSize: 14, marginBottom: 6 }}
+            >
+              Amenities
+            </h3>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+                fontSize: 11,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>📶</span>
+                <span>Fast Wi‑Fi</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🧺</span>
+                <span>Washer & dryer</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🚗</span>
+                <span>Free parking</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🍳</span>
+                <span>Stocked kitchen</span>
+              </div>
+            </div>
+          </div>
+
+          {/* What you get (perks) */}
+          <div style={{ marginBottom: 14 }}>
+            <h3
+              className="nm-heading-lg"
+              style={{ fontSize: 14, marginBottom: 4 }}
+            >
+              What you get
+            </h3>
+            <ul
+              className="nm-body"
+              style={{ fontSize: 11, paddingLeft: 18, listStyle: 'disc' }}
+            >
+              {listing.perks.map((perk) => (
+                <li key={perk}>{perk}</li>
+              ))}
+              <li>Quiet hours ideal for night shifters</li>
+              <li>Simple, nurse-first communication</li>
+            </ul>
+          </div>
+
+          {/* NightShift tip */}
+          <div
+            style={{
+              marginTop: 4,
+              marginBottom: 14,
+              padding: 12,
+              borderRadius: 18,
+              background: 'rgba(255,255,255,0.85)',
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                background:
+                  'radial-gradient(circle at 30% 0%, #f97316 0, #facc15 40%, #f97316 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 18,
+              }}
+            >
+              🩺
+            </div>
+            <div>
+              <p
+                className="nm-body"
+                style={{ fontSize: 11, fontWeight: 600 }}
+              >
+                NightShift tip
+              </p>
+              <p className="nm-body" style={{ fontSize: 11 }}>
+                Tell the host your shift schedule so they can help keep things
+                quiet when you need sleep.
+              </p>
+            </div>
+          </div>
+
+          {/* Fake calendar + Select dates CTA */}
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 18,
+              background: 'rgba(255,255,255,0.9)',
+              boxShadow:
+                '0 10px 22px rgba(148,163,184,0.25), -4px -4px 10px rgba(255,255,255,0.9)',
+              marginBottom: 14,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <div>
+                <p
+                  className="nm-body"
+                  style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}
+                >
+                  Dates
+                </p>
+                <p
+                  className="nm-body"
+                  style={{ fontSize: 12, fontWeight: 600 }}
+                >
+                  Add your contract dates
+                </p>
+              </div>
+              <button
+                type="button"
+                style={{
+                  borderRadius: 999,
+                  border: 'none',
+                  padding: '6px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background:
+                    'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                  color: 'white',
+                  boxShadow: '0 8px 18px rgba(129,140,248,0.45)',
+                }}
+              >
+                Select dates
+              </button>
+            </div>
+            <div
+              style={{
+                borderRadius: 14,
+                border: '1px dashed rgba(148,163,184,0.7)',
+                padding: 8,
+                fontSize: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                  gap: 4,
+                  textAlign: 'center',
+                  marginBottom: 4,
+                }}
+              >
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
+                  <span
+                    key={d}
+                    style={{
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.3,
+                      color: '#9ca3af',
+                    }}
+                  >
+                    {d}
+                  </span>
+                ))}
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                  gap: 4,
+                  textAlign: 'center',
+                }}
+              >
+                {Array.from({ length: 14 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      height: 18,
+                      borderRadius: 999,
+                      background:
+                        idx >= 3 && idx <= 9
+                          ? 'linear-gradient(135deg, #6366f1, #ec4899)'
+                          : 'rgba(249,250,251,1)',
+                      opacity: idx >= 3 && idx <= 9 ? 0.85 : 1,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Static map stub */}
+          <div
+            style={{
+              borderRadius: 18,
+              overflow: 'hidden',
+              background:
+                'linear-gradient(135deg, #0f172a, #1d4ed8, #22c55e)',
+              padding: 10,
+              color: 'white',
+              fontSize: 11,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ opacity: 0.9 }}>Map preview</span>
+              <span
+                style={{
+                  borderRadius: 999,
+                  padding: '2px 8px',
+                  background: 'rgba(15,23,42,0.65)',
+                  fontSize: 10,
+                }}
+              >
+                Exact location after booking
+              </span>
+            </div>
+            <div
+              style={{
+                borderRadius: 14,
+                background:
+                  'radial-gradient(circle at 20% 0%, #bae6fd 0, #38bdf8 30%, #0f172a 90%)',
+                height: 90,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage:
+                    'radial-gradient(circle at 20% 30%, rgba(56,189,248,0.35) 0, transparent 50%), radial-gradient(circle at 80% 70%, rgba(52,211,153,0.35) 0, transparent 55%)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '55%',
+                  top: '45%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  background: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 10px 25px rgba(15,23,42,0.65)',
+                  fontSize: 14,
+                }}
+              >
+                📍
+              </div>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  bottom: 10,
+                  borderRadius: 999,
+                  padding: '4px 10px',
+                  background: 'rgba(15,23,42,0.75)',
+                  color: 'white',
+                  fontSize: 10,
+                }}
+              >
+                Near {listing.hospitalName}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom reserve bar */}
+        <div
+          style={{
+            padding: 12,
+            borderTop: '1px solid rgba(148,163,184,0.25)',
+            background:
+              'linear-gradient(to top, rgba(249,250,251,0.95), rgba(249,250,251,0.7))',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+              }}
+            >
+              ${listing.pricePerMonth.toLocaleString()}
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 400,
+                  marginLeft: 4,
+                  color: '#6b7280',
+                }}
+              >
+                / month
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280' }}>
+              Save now, ask questions later.
+            </div>
+          </div>
+          <button
+            type="button"
+            style={{
+              border: 'none',
+              borderRadius: 999,
+              padding: '10px 18px',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background:
+                'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+              color: 'white',
+              boxShadow: '0 12px 28px rgba(129,140,248,0.5)',
+            }}
+          >
+            Request to book
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1034,374 +1742,6 @@ const NursesTab: React.FC<{
         </div>
       </NeumoCard>
     </>
-  )
-}
-
-const ListingDetailModal: React.FC<{
-  listing: Listing
-  onClose: () => void
-}> = ({ listing, onClose }) => {
-  const roomLabel =
-    listing.roomType === 'entire-place'
-      ? 'Entire place'
-      : listing.roomType === 'private-room'
-      ? 'Private room'
-      : 'Shared room'
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 40,
-        background: 'rgba(15,23,42,0.55)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-      }}
-    >
-      <div
-        style={{
-          width: 380,
-          maxWidth: '100%',
-          maxHeight: '100%',
-          borderRadius: 40,
-          overflow: 'hidden',
-          background:
-            'linear-gradient(145deg, #f9fafb, #eef2ff, #e0f2fe, #fef9c3)',
-          boxShadow:
-            '0 30px 60px rgba(15,23,42,0.45), -6px -6px 20px rgba(255,255,255,0.9)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* HERO IMAGE / TOP BAR */}
-        <div
-          style={{
-            position: 'relative',
-            height: 220,
-            backgroundImage: `url(${listing.imageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              position: 'absolute',
-              top: 16,
-              left: 16,
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              border: 'none',
-              background: 'rgba(255,255,255,0.95)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              cursor: 'pointer',
-            }}
-          >
-            ←
-          </button>
-
-          <div
-            style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              display: 'flex',
-              gap: 10,
-            }}
-          >
-            <button
-              type="button"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 999,
-                border: 'none',
-                background: 'rgba(255,255,255,0.95)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                cursor: 'pointer',
-              }}
-            >
-              ⤴️
-            </button>
-            <button
-              type="button"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 999,
-                border: 'none',
-                background: 'rgba(255,255,255,0.95)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                cursor: 'pointer',
-              }}
-            >
-              🤍
-            </button>
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 14,
-              right: 18,
-              padding: '4px 12px',
-              borderRadius: 999,
-              background: 'rgba(15,23,42,0.85)',
-              color: 'white',
-              fontSize: 11,
-              fontWeight: 500,
-            }}
-          >
-            1 / 12
-          </div>
-        </div>
-
-        {/* SCROLLABLE DETAILS */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '16px 18px 96px 18px',
-          }}
-        >
-          <section style={{ marginBottom: 16 }}>
-            <h1
-              className="nm-heading-lg"
-              style={{ fontSize: 20, marginBottom: 4 }}
-            >
-              {listing.title}
-            </h1>
-            <p className="nm-body" style={{ fontSize: 13, marginBottom: 4 }}>
-              Entire home in {listing.city}, {listing.state}
-            </p>
-            <p className="nm-body" style={{ fontSize: 12, color: '#6b7280' }}>
-              For travel nurses near{' '}
-              <strong>{listing.hospitalName}</strong> · ~
-              {listing.minutesToHospital} min commute
-            </p>
-
-            {listing.rating && (
-              <p
-                className="nm-body"
-                style={{
-                  fontSize: 12,
-                  marginTop: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <span>⭐ {listing.rating.toFixed(2)}</span>
-                {listing.reviewCount && (
-                  <span style={{ color: '#6b7280' }}>
-                    · {listing.reviewCount} reviews
-                  </span>
-                )}
-              </p>
-            )}
-          </section>
-
-          <section
-            style={{
-              borderRadius: 20,
-              padding: 14,
-              marginBottom: 16,
-              background: 'rgba(255,255,255,0.9)',
-              boxShadow:
-                '0 18px 30px rgba(148,163,184,0.30), -4px -4px 14px rgba(255,255,255,0.9)',
-            }}
-          >
-            <h2
-              className="nm-heading-lg"
-              style={{ fontSize: 15, marginBottom: 8 }}
-            >
-              What this place offers
-            </h2>
-            <ul
-              className="nm-body"
-              style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: 0,
-                fontSize: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-              }}
-            >
-              <li>🏡 {roomLabel}</li>
-              <li>🏥 {listing.hospitalName}</li>
-              <li>🕒 ~{listing.minutesToHospital} min to hospital</li>
-              {listing.perks.map((perk) => (
-                <li key={perk}>✅ {perk}</li>
-              ))}
-            </ul>
-          </section>
-
-          <section style={{ marginBottom: 24 }}>
-            <h2
-              className="nm-heading-lg"
-              style={{ fontSize: 15, marginBottom: 8 }}
-            >
-              Stay details
-            </h2>
-            <p className="nm-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
-              This home is set up with travel clinicians in mind: quiet hours,
-              fast Wi-Fi, and a comfortable space to actually rest between
-              shifts. Flexible month–to–month options available, with simple
-              move-in and move-out.
-            </p>
-          </section>
-
-          <section
-            style={{
-              borderRadius: 18,
-              padding: 14,
-              background: 'rgba(255,255,255,0.95)',
-              boxShadow:
-                '0 16px 28px rgba(148,163,184,0.25), -4px -4px 12px rgba(255,255,255,0.95)',
-            }}
-          >
-            <h2
-              className="nm-heading-lg"
-              style={{ fontSize: 15, marginBottom: 10 }}
-            >
-              Meet your host
-            </h2>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                marginBottom: 8,
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 999,
-                  background:
-                    'radial-gradient(circle at top left, #a855f7, #ec4899)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: 22,
-                }}
-              >
-                🏡
-              </div>
-              <div>
-                <p
-                  className="nm-heading-lg"
-                  style={{ fontSize: 14, marginBottom: 2 }}
-                >
-                  NightShift host
-                </p>
-                <p
-                  className="nm-body"
-                  style={{ fontSize: 11, color: '#6b7280' }}
-                >
-                  3+ years hosting travel professionals
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="nm-pill"
-              style={{ fontSize: 12 }}
-            >
-              Message host
-            </button>
-          </section>
-        </div>
-
-        {/* BOTTOM RESERVE BAR */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            padding: '12px 18px 18px 18px',
-          }}
-        >
-          <div
-            style={{
-              borderRadius: 999,
-              background:
-                'linear-gradient(135deg, #111827, #1f2937, #be185d)',
-              padding: 4,
-              boxShadow:
-                '0 18px 35px rgba(15,23,42,0.7), -4px -4px 14px rgba(255,255,255,0.6)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                borderRadius: 999,
-                background: 'white',
-                padding: '10px 14px',
-                justifyContent: 'space-between',
-                gap: 10,
-              }}
-            >
-              <div>
-                <div
-                  className="nm-body"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    marginBottom: 2,
-                  }}
-                >
-                  ${listing.pricePerMonth.toLocaleString()} / month
-                </div>
-                <div
-                  className="nm-body"
-                  style={{ fontSize: 11, color: '#6b7280' }}
-                >
-                  No platform fees · flexible terms
-                </div>
-              </div>
-              <button
-                type="button"
-                style={{
-                  padding: '9px 20px',
-                  borderRadius: 999,
-                  border: 'none',
-                  background:
-                    'linear-gradient(135deg, #ec4899, #f97316, #facc15)',
-                  color: '#111827',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Reserve
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
