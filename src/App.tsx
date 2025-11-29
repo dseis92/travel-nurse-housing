@@ -396,6 +396,8 @@ const App: React.FC = () => {
 
   const [isSearchFlowOpen, setIsSearchFlowOpen] = useState(false)
 
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
+
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -565,6 +567,13 @@ const App: React.FC = () => {
         />
       )}
 
+      {selectedListing && (
+        <ListingDetailModal
+          listing={selectedListing}
+          onClose={() => setSelectedListing(null)}
+        />
+      )}
+
       <div className="nm-phone">
         <main className="nm-screen-content nm-fade-in">
           {/* HEADER: search pill + category tabs */}
@@ -707,7 +716,10 @@ const App: React.FC = () => {
                       >
                         {group.items.map((listing) => (
                           <NeumoCard key={listing.id}>
-                            <ListingCard listing={listing} />
+                            <ListingCard
+                              listing={listing}
+                              onSelect={setSelectedListing}
+                            />
                           </NeumoCard>
                         ))}
                       </div>
@@ -753,13 +765,23 @@ const App: React.FC = () => {
   )
 }
 
-const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
+const ListingCard: React.FC<{
+  listing: Listing
+  onSelect: (listing: Listing) => void
+}> = ({ listing, onSelect }) => {
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onSelect(listing)}
       style={{
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
+        textAlign: 'left',
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
       }}
     >
       <div
@@ -848,7 +870,7 @@ const ListingCard: React.FC<{ listing: Listing }> = ({ listing }) => {
           ))}
         </div>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -1012,6 +1034,374 @@ const NursesTab: React.FC<{
         </div>
       </NeumoCard>
     </>
+  )
+}
+
+const ListingDetailModal: React.FC<{
+  listing: Listing
+  onClose: () => void
+}> = ({ listing, onClose }) => {
+  const roomLabel =
+    listing.roomType === 'entire-place'
+      ? 'Entire place'
+      : listing.roomType === 'private-room'
+      ? 'Private room'
+      : 'Shared room'
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 40,
+        background: 'rgba(15,23,42,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+      }}
+    >
+      <div
+        style={{
+          width: 380,
+          maxWidth: '100%',
+          maxHeight: '100%',
+          borderRadius: 40,
+          overflow: 'hidden',
+          background:
+            'linear-gradient(145deg, #f9fafb, #eef2ff, #e0f2fe, #fef9c3)',
+          boxShadow:
+            '0 30px 60px rgba(15,23,42,0.45), -6px -6px 20px rgba(255,255,255,0.9)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* HERO IMAGE / TOP BAR */}
+        <div
+          style={{
+            position: 'relative',
+            height: 220,
+            backgroundImage: `url(${listing.imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: 16,
+              left: 16,
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              border: 'none',
+              background: 'rgba(255,255,255,0.95)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              cursor: 'pointer',
+            }}
+          >
+            ←
+          </button>
+
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              display: 'flex',
+              gap: 10,
+            }}
+          >
+            <button
+              type="button"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                border: 'none',
+                background: 'rgba(255,255,255,0.95)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 18,
+                cursor: 'pointer',
+              }}
+            >
+              ⤴️
+            </button>
+            <button
+              type="button"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                border: 'none',
+                background: 'rgba(255,255,255,0.95)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 18,
+                cursor: 'pointer',
+              }}
+            >
+              🤍
+            </button>
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 14,
+              right: 18,
+              padding: '4px 12px',
+              borderRadius: 999,
+              background: 'rgba(15,23,42,0.85)',
+              color: 'white',
+              fontSize: 11,
+              fontWeight: 500,
+            }}
+          >
+            1 / 12
+          </div>
+        </div>
+
+        {/* SCROLLABLE DETAILS */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px 18px 96px 18px',
+          }}
+        >
+          <section style={{ marginBottom: 16 }}>
+            <h1
+              className="nm-heading-lg"
+              style={{ fontSize: 20, marginBottom: 4 }}
+            >
+              {listing.title}
+            </h1>
+            <p className="nm-body" style={{ fontSize: 13, marginBottom: 4 }}>
+              Entire home in {listing.city}, {listing.state}
+            </p>
+            <p className="nm-body" style={{ fontSize: 12, color: '#6b7280' }}>
+              For travel nurses near{' '}
+              <strong>{listing.hospitalName}</strong> · ~
+              {listing.minutesToHospital} min commute
+            </p>
+
+            {listing.rating && (
+              <p
+                className="nm-body"
+                style={{
+                  fontSize: 12,
+                  marginTop: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span>⭐ {listing.rating.toFixed(2)}</span>
+                {listing.reviewCount && (
+                  <span style={{ color: '#6b7280' }}>
+                    · {listing.reviewCount} reviews
+                  </span>
+                )}
+              </p>
+            )}
+          </section>
+
+          <section
+            style={{
+              borderRadius: 20,
+              padding: 14,
+              marginBottom: 16,
+              background: 'rgba(255,255,255,0.9)',
+              boxShadow:
+                '0 18px 30px rgba(148,163,184,0.30), -4px -4px 14px rgba(255,255,255,0.9)',
+            }}
+          >
+            <h2
+              className="nm-heading-lg"
+              style={{ fontSize: 15, marginBottom: 8 }}
+            >
+              What this place offers
+            </h2>
+            <ul
+              className="nm-body"
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                fontSize: 12,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+              }}
+            >
+              <li>🏡 {roomLabel}</li>
+              <li>🏥 {listing.hospitalName}</li>
+              <li>🕒 ~{listing.minutesToHospital} min to hospital</li>
+              {listing.perks.map((perk) => (
+                <li key={perk}>✅ {perk}</li>
+              ))}
+            </ul>
+          </section>
+
+          <section style={{ marginBottom: 24 }}>
+            <h2
+              className="nm-heading-lg"
+              style={{ fontSize: 15, marginBottom: 8 }}
+            >
+              Stay details
+            </h2>
+            <p className="nm-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
+              This home is set up with travel clinicians in mind: quiet hours,
+              fast Wi-Fi, and a comfortable space to actually rest between
+              shifts. Flexible month–to–month options available, with simple
+              move-in and move-out.
+            </p>
+          </section>
+
+          <section
+            style={{
+              borderRadius: 18,
+              padding: 14,
+              background: 'rgba(255,255,255,0.95)',
+              boxShadow:
+                '0 16px 28px rgba(148,163,184,0.25), -4px -4px 12px rgba(255,255,255,0.95)',
+            }}
+          >
+            <h2
+              className="nm-heading-lg"
+              style={{ fontSize: 15, marginBottom: 10 }}
+            >
+              Meet your host
+            </h2>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 8,
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  background:
+                    'radial-gradient(circle at top left, #a855f7, #ec4899)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: 22,
+                }}
+              >
+                🏡
+              </div>
+              <div>
+                <p
+                  className="nm-heading-lg"
+                  style={{ fontSize: 14, marginBottom: 2 }}
+                >
+                  NightShift host
+                </p>
+                <p
+                  className="nm-body"
+                  style={{ fontSize: 11, color: '#6b7280' }}
+                >
+                  3+ years hosting travel professionals
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="nm-pill"
+              style={{ fontSize: 12 }}
+            >
+              Message host
+            </button>
+          </section>
+        </div>
+
+        {/* BOTTOM RESERVE BAR */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: '12px 18px 18px 18px',
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 999,
+              background:
+                'linear-gradient(135deg, #111827, #1f2937, #be185d)',
+              padding: 4,
+              boxShadow:
+                '0 18px 35px rgba(15,23,42,0.7), -4px -4px 14px rgba(255,255,255,0.6)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 999,
+                background: 'white',
+                padding: '10px 14px',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}
+            >
+              <div>
+                <div
+                  className="nm-body"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    marginBottom: 2,
+                  }}
+                >
+                  ${listing.pricePerMonth.toLocaleString()} / month
+                </div>
+                <div
+                  className="nm-body"
+                  style={{ fontSize: 11, color: '#6b7280' }}
+                >
+                  No platform fees · flexible terms
+                </div>
+              </div>
+              <button
+                type="button"
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 999,
+                  border: 'none',
+                  background:
+                    'linear-gradient(135deg, #ec4899, #f97316, #facc15)',
+                  color: '#111827',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Reserve
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
