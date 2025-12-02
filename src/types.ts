@@ -68,6 +68,7 @@ export type Listing = {
   rating?: number
   reviewCount?: number
   section: string
+  hostId?: string
   // New attributes for upcoming features
   verifiedHost?: boolean
   allowsPets?: boolean

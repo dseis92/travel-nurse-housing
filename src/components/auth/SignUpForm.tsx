@@ -50,8 +50,14 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
       });
 
       if (result.success) {
-        toast.success('Account created successfully!');
-        onSuccess?.();
+        if (result.error) {
+          // Email confirmation required message
+          toast.success(result.error, { duration: 6000 });
+          // Don't call onSuccess - keep modal open so they can see the message
+        } else {
+          toast.success('Account created successfully!');
+          onSuccess?.();
+        }
       } else {
         toast.error(result.error || 'Failed to create account');
       }
@@ -63,49 +69,51 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-8">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
-          <span className="text-2xl">{formData.role === 'nurse' ? '👩‍⚕️' : '🏡'}</span>
+    <div className="w-full max-w-md mx-auto p-6">
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div style={{
+          fontSize: 12,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          color: '#9ca3af',
+          marginBottom: 8,
+        }}>
+          NightShift Housing
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h2>
-        <p className="text-gray-600">
+        <h2 className="nm-heading-lg" style={{ fontSize: 22, marginBottom: 4 }}>
+          Create Account
+        </h2>
+        <p className="nm-body" style={{ fontSize: 13, color: '#6b7280' }}>
           Join as a {formData.role === 'nurse' ? 'Travel Nurse' : 'Host'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Role Selection */}
         {!initialRole && (
-          <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
               onClick={() => setFormData({ ...formData, role: 'nurse' })}
-              className={`flex-1 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                formData.role === 'nurse'
-                  ? 'bg-white shadow-sm text-indigo-600'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
+              className={formData.role === 'nurse' ? 'nm-pill nm-pill--active' : 'nm-pill'}
+              style={{ flex: 1, fontSize: 12 }}
             >
-              Travel Nurse
+              👩‍⚕️ Nurse
             </button>
             <button
               type="button"
               onClick={() => setFormData({ ...formData, role: 'host' })}
-              className={`flex-1 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                formData.role === 'host'
-                  ? 'bg-white shadow-sm text-indigo-600'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
+              className={formData.role === 'host' ? 'nm-pill nm-pill--active' : 'nm-pill'}
+              style={{ flex: 1, fontSize: 12 }}
             >
-              Host
+              🏡 Host
             </button>
           </div>
         )}
 
         {/* Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="nm-body" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
             Full Name
           </label>
           <input
@@ -113,14 +121,31 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 14,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 14,
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
             placeholder="John Doe"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(148,163,184,0.3)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
         </div>
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="nm-body" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
             Email
           </label>
           <input
@@ -128,28 +153,62 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
             required
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-            placeholder="john@example.com"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 14,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 14,
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
+            placeholder="your@email.com"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(148,163,184,0.3)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
         </div>
 
         {/* Phone (optional) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone Number <span className="text-gray-400">(optional)</span>
+          <label className="nm-body" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+            Phone <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
           </label>
           <input
             type="tel"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 14,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 14,
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
             placeholder="(555) 123-4567"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(148,163,184,0.3)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="nm-body" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
             Password
           </label>
           <input
@@ -157,14 +216,31 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
             required
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 14,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 14,
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
             placeholder="At least 6 characters"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(148,163,184,0.3)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
         </div>
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="nm-body" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
             Confirm Password
           </label>
           <input
@@ -172,8 +248,25 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
             required
             value={formData.confirmPassword}
             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 14,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(255,255,255,0.9)',
+              fontSize: 14,
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
             placeholder="Re-enter password"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(148,163,184,0.3)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
         </div>
 
@@ -181,30 +274,42 @@ export function SignUpForm({ initialRole, onSuccess, onSwitchToSignIn }: SignUpF
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-4 rounded-xl font-semibold shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60 transform hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          className="nm-pill nm-pill--active"
+          style={{
+            width: '100%',
+            marginTop: 8,
+            fontSize: 14,
+            fontWeight: 600,
+            opacity: loading ? 0.6 : 1,
+            cursor: loading ? 'not-allowed' : 'pointer',
+          }}
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Creating account...
-            </span>
-          ) : (
-            'Create Account'
-          )}
+          {loading ? 'Creating account...' : 'Create Account'}
         </button>
 
         {/* Sign In Link */}
         {onSwitchToSignIn && (
-          <div className="text-center pt-2">
-            <p className="text-sm text-gray-600">
+          <div style={{
+            marginTop: 8,
+            paddingTop: 16,
+            borderTop: '1px solid rgba(148,163,184,0.2)',
+            textAlign: 'center',
+          }}>
+            <p className="nm-body" style={{ fontSize: 12, color: '#6b7280' }}>
               Already have an account?{' '}
               <button
                 type="button"
                 onClick={onSwitchToSignIn}
-                className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
+                className="nm-body"
+                style={{
+                  fontSize: 12,
+                  color: '#6366f1',
+                  fontWeight: 600,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
               >
                 Sign In
               </button>

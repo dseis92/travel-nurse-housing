@@ -12,6 +12,10 @@ import { useAuthStore } from './stores/authStore'
 import { authService } from './services/authService'
 import { AuthModal } from './components/auth/AuthModal'
 import { NurseVerification } from './components/verification/NurseVerification'
+import { BookingRequestForm } from './components/booking/BookingRequestForm'
+import { NurseOnboarding } from './components/onboarding/NurseOnboarding'
+import { HostOnboarding } from './components/onboarding/HostOnboarding'
+import toast from 'react-hot-toast'
 
 type RoomTypeFilter = 'any' | 'private-room' | 'entire-place' | 'shared'
 
@@ -51,12 +55,12 @@ const LISTINGS: Listing[] = demoListings
 
 const App: React.FC = () => {
   // Auth state
-  const { profile, loading: authLoading, initialized } = useAuthStore()
+  const { profile } = useAuthStore()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup')
-
-  // Debug: Log modal state
-  console.log('🎭 Modal state:', { showAuthModal, authModalMode });
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [showOnboardingFlow, setShowOnboardingFlow] = useState(false)
+  const [onboardingCompleted, setOnboardingCompleted] = useState<Set<string>>(new Set())
 
   const [activeCategory, setActiveCategory] = useState<
     'housing' | 'hospitals' | 'nurses'
@@ -89,25 +93,14 @@ const App: React.FC = () => {
 
   const resultsRef = useRef<HTMLDivElement | null>(null)
 
-  // Initialize auth on mount (only once)
+  // Initialize auth on mount (silently in background)
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
 
     const initAuth = async () => {
       if (mounted) {
         await authService.initialize();
         authService.setupAuthListener();
-
-        // Failsafe: Force initialized after 3 seconds if it hasn't happened
-        timeoutId = setTimeout(() => {
-          const { initialized } = useAuthStore.getState();
-          if (!initialized && mounted) {
-            console.warn('⚠️ Auth initialization timed out, forcing initialized state');
-            useAuthStore.getState().setInitialized(true);
-            useAuthStore.getState().setLoading(false);
-          }
-        }, 3000);
       }
     };
 
@@ -115,9 +108,35 @@ const App: React.FC = () => {
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [])
+
+  // Smooth transition when profile loads + check if onboarding needed
+  useEffect(() => {
+    if (profile) {
+      setIsTransitioning(true)
+      const timer = setTimeout(() => {
+        setIsTransitioning(false)
+      }, 300)
+
+      // Check if this user needs onboarding
+      // Show onboarding if:
+      // 1. User just signed up/signed in
+      // 2. Haven't shown onboarding for this user yet
+      // 3. Profile doesn't have preferred cities or specialties (nurse) or other key data
+      const needsOnboarding = !onboardingCompleted.has(profile.id) && (
+        (profile.role === 'nurse' && !profile.preferredCities?.length) ||
+        (profile.role === 'host' && !profile.bio)
+      );
+
+      if (needsOnboarding) {
+        console.log('🎯 Triggering onboarding for', profile.role, profile.id);
+        setShowOnboardingFlow(true);
+      }
+
+      return () => clearTimeout(timer)
+    }
+  }, [profile, onboardingCompleted])
 
   useEffect(() => {
     const loaded = loadOnboardingPrefs()
@@ -283,143 +302,85 @@ const App: React.FC = () => {
     }
   }
 
-  const handleRoleSelect = () => {
-    setAuthModalMode('signup')
-    setShowAuthModal(true)
-  }
+  // Default to nurse view for browsing (even when not authenticated)
+  const viewMode = profile?.role || 'nurse'
 
-  // Debug: Log auth state
-  console.log('🔍 Auth State:', { initialized, authLoading, hasProfile: !!profile });
+  // Handle signup success -> trigger onboarding
+  const handleSignUpSuccess = () => {
+    setShowOnboardingFlow(true);
+  };
 
-  // Loading state
-  if (!initialized || authLoading) {
-    return (
-      <div className="nm-shell">
-        <div className="nm-phone">
-          <main className="nm-screen-content nm-fade-in flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Loading...</p>
-              <p className="text-xs text-gray-400 mt-2">
-                initialized: {initialized ? 'yes' : 'no'}, loading: {authLoading ? 'yes' : 'no'}
-              </p>
-            </div>
-          </main>
-        </div>
-      </div>
-    )
-  }
+  const handleOnboardingComplete = () => {
+    setShowOnboardingFlow(false);
+    // Mark this user as having completed onboarding
+    if (profile) {
+      setOnboardingCompleted(prev => new Set(prev).add(profile.id));
+    }
+  };
 
-  // Not authenticated - show role selector
-  if (!profile) {
-    return (
-      <>
-        <Toaster position="top-center" />
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          initialMode={authModalMode}
-        />
-
-        <div className="nm-shell">
-          <div className="nm-phone">
-            <main className="nm-screen-content nm-fade-in">
-              <NeumoCard className="nm-explore-header">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <div style={{
-                      fontSize: 12,
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
-                      color: '#9ca3af',
-                      marginBottom: 4,
-                    }}>
-                      NightShift Housing
-                    </div>
-                    <h1 className="nm-heading-lg" style={{ fontSize: 22, marginBottom: 4 }}>
-                      Who&apos;s signing in?
-                    </h1>
-                    <p className="nm-body" style={{ fontSize: 13 }}>
-                      Choose your role to see the right dashboard and tools.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="nm-pill nm-pill--active"
-                    onClick={handleRoleSelect}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    <span>👩‍⚕️ I&apos;m a travel nurse</span>
-                    <span style={{ fontSize: 16 }}>→</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="nm-pill"
-                    onClick={handleRoleSelect}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    <span>🏡 I&apos;m a host</span>
-                    <span style={{ fontSize: 16 }}>→</span>
-                  </button>
-
-                  <div style={{
-                    marginTop: 8,
-                    paddingTop: 12,
-                    borderTop: '1px solid rgba(148,163,184,0.2)',
-                    textAlign: 'center',
-                  }}>
-                    <p className="nm-body" style={{ fontSize: 12, color: '#6b7280' }}>
-                      Already have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthModalMode('signin');
-                          setShowAuthModal(true);
-                        }}
-                        className="nm-body"
-                        style={{
-                          fontSize: 12,
-                          color: '#6366f1',
-                          fontWeight: 600,
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                        }}
-                      >
-                        Sign In
-                      </button>
-                    </p>
-                  </div>
-                </div>
-              </NeumoCard>
-            </main>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // User is authenticated - get their role
-  const viewMode = profile.role
+  // DEV: Manual onboarding trigger (only in development)
+  const isDev = import.meta.env.DEV;
 
   // MAIN APP
   return (
     <>
       <Toaster position="top-center" />
-      <div className="nm-shell">
+
+      {/* DEV ONLY: Manual onboarding trigger */}
+      {isDev && profile && !showOnboardingFlow && (
+        <button
+          onClick={() => {
+            console.log('🔧 Manually triggering onboarding');
+            setShowOnboardingFlow(true);
+          }}
+          style={{
+            position: 'fixed',
+            bottom: 80,
+            right: 20,
+            zIndex: 99999,
+            padding: '8px 16px',
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            color: 'white',
+            border: 'none',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(245,158,11,0.4)',
+          }}
+        >
+          🔧 Test Onboarding
+        </button>
+      )}
+
+      {/* Onboarding Flows */}
+      {showOnboardingFlow && profile?.role === 'nurse' && (
+        <NurseOnboarding
+          onComplete={handleOnboardingComplete}
+          onClose={handleOnboardingComplete}
+        />
+      )}
+
+      {showOnboardingFlow && profile?.role === 'host' && (
+        <HostOnboarding
+          onComplete={handleOnboardingComplete}
+          onClose={handleOnboardingComplete}
+        />
+      )}
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
+        onSignUpSuccess={handleSignUpSuccess}
+      />
+      <div
+        className="nm-shell"
+        style={{
+          opacity: isTransitioning ? 0 : 1,
+          transition: 'opacity 0.3s ease-in-out',
+        }}
+      >
         {isSearchFlowOpen && (
           <SearchFlow
             initialLocation={hospitalOrCity}
@@ -506,7 +467,41 @@ const App: React.FC = () => {
 
           {viewMode === 'nurse' ? (
             activeCategory === 'nurses' ? (
-              showOnboarding ? (
+              !profile ? (
+                <NeumoCard>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: 16 }}>
+                    <div style={{ fontSize: 40 }}>👩‍⚕️</div>
+                    <h2 className="nm-heading-lg" style={{ fontSize: 18 }}>
+                      Sign in to manage your profile
+                    </h2>
+                    <p className="nm-body" style={{ fontSize: 13, color: '#6b7280' }}>
+                      Create a profile to save preferences, track applications, and get personalized matches.
+                    </p>
+                    <button
+                      type="button"
+                      className="nm-pill nm-pill--active"
+                      onClick={() => {
+                        setAuthModalMode('signup');
+                        setShowAuthModal(true);
+                      }}
+                      style={{ fontSize: 14 }}
+                    >
+                      Create Account
+                    </button>
+                    <button
+                      type="button"
+                      className="nm-pill"
+                      onClick={() => {
+                        setAuthModalMode('signin');
+                        setShowAuthModal(true);
+                      }}
+                      style={{ fontSize: 13 }}
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                </NeumoCard>
+              ) : showOnboarding ? (
                 <>
                   <NeumoCard>
                     <div
@@ -915,9 +910,16 @@ const App: React.FC = () => {
           <button
             className="nm-bottom-icon"
             type="button"
-            onClick={handleSignOut}
+            onClick={() => {
+              if (profile) {
+                handleSignOut();
+              } else {
+                setAuthModalMode('signin');
+                setShowAuthModal(true);
+              }
+            }}
           >
-            👤
+            {profile ? '👋' : '👤'}
           </button>
         </nav>
       </div>
@@ -1062,6 +1064,10 @@ const ListingDetailModal: React.FC<{
   onToggleFavorite: () => void
   onClose: () => void
 }> = ({ listing, isFavorite, onToggleFavorite, onClose }) => {
+  const { profile } = useAuthStore()
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showBookingForm, setShowBookingForm] = useState(false)
+
   const roomLabel =
     listing.roomType === 'entire-place'
       ? 'Entire place'
@@ -1582,60 +1588,98 @@ const ListingDetailModal: React.FC<{
           </div>
         </div>
 
-        {/* Bottom reserve bar */}
+        {/* Bottom section - Booking Form or CTA */}
         <div
           style={{
-            padding: 12,
+            padding: 16,
             borderTop: '1px solid rgba(148,163,184,0.25)',
             background:
               'linear-gradient(to top, rgba(249,250,251,0.95), rgba(249,250,251,0.7))',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 10,
           }}
         >
-          <div>
+          {showBookingForm ? (
+            <BookingRequestForm
+              listing={listing}
+              hostId={listing.hostId || 'demo-host-id'}
+              onSuccess={() => {
+                setShowBookingForm(false);
+                toast.success('Booking request sent! The host will respond soon.');
+                handleRequestClose();
+              }}
+              onCancel={() => setShowBookingForm(false)}
+            />
+          ) : (
             <div
               style={{
-                fontSize: 14,
-                fontWeight: 700,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10,
               }}
             >
-              ${listing.pricePerMonth.toLocaleString()}
-              <span
+              <div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                  }}
+                >
+                  ${listing.pricePerMonth.toLocaleString()}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 400,
+                      marginLeft: 4,
+                      color: '#6b7280',
+                    }}
+                  >
+                    / month
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                  {profile ? 'Ready to book?' : 'Sign in to request booking'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!profile) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  if (profile.role !== 'nurse') {
+                    toast.error('Only nurses can request bookings');
+                    return;
+                  }
+                  setShowBookingForm(true);
+                }}
                 style={{
-                  fontSize: 11,
-                  fontWeight: 400,
-                  marginLeft: 4,
-                  color: '#6b7280',
+                  border: 'none',
+                  borderRadius: 999,
+                  padding: '10px 18px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background:
+                    'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
+                  color: 'white',
+                  boxShadow: '0 12px 28px rgba(129,140,248,0.5)',
                 }}
               >
-                / month
-              </span>
+                {profile ? 'Request to book' : 'Sign in to book'}
+              </button>
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280' }}>
-              Save now, ask questions later.
-            </div>
-          </div>
-          <button
-            type="button"
-            style={{
-              border: 'none',
-              borderRadius: 999,
-              padding: '10px 18px',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              background:
-                'linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)',
-              color: 'white',
-              boxShadow: '0 12px 28px rgba(129,140,248,0.5)',
-            }}
-          >
-            Request to book
-          </button>
+          )}
         </div>
+
+        {/* Auth Modal */}
+        {showAuthModal && (
+          <AuthModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            initialMode="signup"
+          />
+        )}
       </div>
     </div>
   )
