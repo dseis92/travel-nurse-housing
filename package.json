@@ -11,14 +11,22 @@
   },
   "dependencies": {
     "@fontsource/poppins": "^5.2.7",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@supabase/supabase-js": "^2.86.0",
+    "@tanstack/react-query": "^5.90.11",
+    "date-fns": "^4.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-dropzone": "^14.3.8",
+    "react-hook-form": "^7.67.0",
+    "react-hot-toast": "^2.6.0",
+    "zod": "^4.1.13",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.17",
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

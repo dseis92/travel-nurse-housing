@@ -31,3 +31,89 @@ export type BookingRow = {
   status: 'pending' | 'accepted' | 'declined' | 'cancelled'
   created_at: string
 }
+
+// Domain-level models used throughout the app and in service scaffolding.
+export type UserRole = 'nurse' | 'host'
+
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected'
+
+export type UserProfile = {
+  id: string
+  role: UserRole
+  name: string
+  email: string
+  phone?: string
+  licenseStatus?: VerificationStatus
+  hostVerificationStatus?: VerificationStatus
+  avatarUrl?: string
+  specialties?: string[]
+  preferredCities?: string[]
+  bio?: string
+}
+
+export type Listing = {
+  id: number
+  title: string
+  city: string
+  state: string
+  hospitalName: string
+  hospitalCity: string
+  hospitalState: string
+  minutesToHospital: number
+  pricePerMonth: number
+  roomType: 'private-room' | 'entire-place' | 'shared'
+  imageUrl: string
+  tags: string[]
+  perks: string[]
+  rating?: number
+  reviewCount?: number
+  section: string
+  // New attributes for upcoming features
+  verifiedHost?: boolean
+  allowsPets?: boolean
+  parking?: 'street' | 'garage' | 'driveway'
+  safetyFeatures?: string[]
+  coordinates?: { lat: number; lng: number }
+  contractLengths?: number[]
+  availability?: Array<{ start: string; end: string }>
+}
+
+export type BookingStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
+
+export type Booking = {
+  id: string
+  listingId: number
+  guestId: string
+  startDate: string
+  endDate: string
+  status: BookingStatus
+  createdAt: string
+  holdExpiresAt?: string
+  totalPrice?: number
+  payout?: number
+}
+
+export type Message = {
+  id: string
+  threadId: string
+  senderId: string
+  body: string
+  createdAt: string
+  attachments?: string[]
+  isSystem?: boolean
+}
+
+export type MessageThread = {
+  id: string
+  listingId?: number
+  participantIds: string[]
+  lastMessage?: Message
+  unreadCount?: number
+}
+
+export type PaymentQuote = {
+  subtotal: number
+  platformFee: number
+  hostPayout: number
+  currency: string
+}
