@@ -13,6 +13,11 @@ export default defineConfig({
         'robots.txt',
         'apple-touch-icon.png',
       ],
+      workbox: {
+        // Increase the chunk size limit to avoid precache warnings
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+      },
       manifest: {
         name: 'Nursery',
         short_name: 'Nursery',

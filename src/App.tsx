@@ -10,12 +10,26 @@ import { listingMatchesAvailability } from './lib/availability'
 import { platformServices } from './services/platform'
 import { useAuthStore } from './stores/authStore'
 import { authService } from './services/authService'
+import { fetchListings } from './services/listingService'
+import { HostListings } from './components/host/HostListings'
+import { CreateListingForm } from './components/host/CreateListingForm'
+import { EditListingForm } from './components/host/EditListingForm'
 import { AuthModal } from './components/auth/AuthModal'
 import { NurseVerification } from './components/verification/NurseVerification'
 import { BookingRequestForm } from './components/booking/BookingRequestForm'
 import { NurseOnboarding } from './components/onboarding/NurseOnboarding'
 import { HostOnboarding } from './components/onboarding/HostOnboarding'
+import Map from './components/Map'
+import { HospitalsView } from './components/HospitalsView'
+import { demoHospitals } from './data/demoHospitals'
+import {
+  sortByMatchScore,
+  getMatchLabel,
+  getMatchColor,
+  type UserPreferences,
+} from './lib/smartMatching'
 import toast from 'react-hot-toast'
+import { MessagingContainer } from './components/messaging/MessagingContainer'
 
 type RoomTypeFilter = 'any' | 'private-room' | 'entire-place' | 'shared'
 
@@ -51,9 +65,35 @@ function mapRoomTypeFromOnboarding(
   return 'any'
 }
 
-const LISTINGS: Listing[] = demoListings
+// Toggle between demo data and Supabase
+// Set to true to use Supabase listings, false for demo data
+const USE_SUPABASE_LISTINGS = false
 
 const App: React.FC = () => {
+  // State for listings (demo or Supabase)
+  const [listings, setListings] = useState<Listing[]>(demoListings)
+  const [loadingListings, setLoadingListings] = useState(false)
+
+  // Load listings from Supabase if enabled
+  useEffect(() => {
+    if (USE_SUPABASE_LISTINGS) {
+      const loadSupabaseListings = async () => {
+        try {
+          setLoadingListings(true)
+          const data = await fetchListings()
+          setListings(data)
+        } catch (error) {
+          console.error('Error loading listings:', error)
+          // Fallback to demo listings on error
+          setListings(demoListings)
+        } finally {
+          setLoadingListings(false)
+        }
+      }
+      loadSupabaseListings()
+    }
+  }, [])
+
   // Auth state
   const { profile } = useAuthStore()
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -75,7 +115,7 @@ const App: React.FC = () => {
   const [contractStart, setContractStart] = useState('')
   const [contractEnd, setContractEnd] = useState('')
   const [, setIsSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<Listing[]>(LISTINGS)
+  const [searchResults, setSearchResults] = useState<Listing[]>(listings)
 
   const [isSearchFlowOpen, setIsSearchFlowOpen] = useState(false)
 
@@ -85,8 +125,18 @@ const App: React.FC = () => {
     'home',
   )
 
+  // Messaging state
+  const [showMessaging, setShowMessaging] = useState(false)
+
   // NEW: list vs map layout for the feed
   const [viewLayout, setViewLayout] = useState<'list' | 'map'>('list')
+
+  // Match quality filter
+  const [matchFilter, setMatchFilter] = useState<'all' | 'perfect' | 'great'>('all')
+
+  // Host listing management
+  const [showCreateListing, setShowCreateListing] = useState(false)
+  const [editingListing, setEditingListing] = useState<Listing | null>(null)
 
   // selected listing for detail modal
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
@@ -216,30 +266,70 @@ const App: React.FC = () => {
 
     // if filters wipe everything out, show all listings instead of empty
     if (next.length === 0) {
-      return LISTINGS
+      return listings
     }
 
     return next
   }, [searchResults, hospitalOrCity, maxBudget, roomType, contractStart, contractEnd])
 
+  // Build user preferences from current filters for smart matching
+  const userPreferences: UserPreferences = useMemo(() => {
+    return {
+      location: hospitalOrCity || undefined,
+      maxBudget: typeof maxBudget === 'number' ? maxBudget : undefined,
+      roomType: roomType !== 'any' ? roomType : undefined,
+      startDate: contractStart || undefined,
+      endDate: contractEnd || undefined,
+    }
+  }, [hospitalOrCity, maxBudget, roomType, contractStart, contractEnd])
+
   // Listings actually shown, depending on bottom tab (All vs Favorites)
   const displayedListings = useMemo(() => {
+    let listings: Listing[]
     if (activeBottomTab === 'favorites') {
       if (favorites.length === 0) return []
-      return filteredListings.filter((l) => favorites.includes(l.id))
+      listings = filteredListings.filter((l) => favorites.includes(l.id))
+    } else {
+      listings = filteredListings
     }
-    return filteredListings
-  }, [filteredListings, favorites, activeBottomTab])
 
-  const groupedListings = useMemo(() => {
-    const map = new Map<string, Listing[]>()
+    // Add match scores if user has preferences
+    const hasPreferences = userPreferences.location || userPreferences.maxBudget
+    if (hasPreferences) {
+      const scoredListings = sortByMatchScore(listings, userPreferences)
+
+      // Apply match quality filter
+      if (matchFilter === 'perfect') {
+        return scoredListings.filter((l) => l.matchScore && l.matchScore.overall >= 90)
+      } else if (matchFilter === 'great') {
+        return scoredListings.filter((l) => l.matchScore && l.matchScore.overall >= 75)
+      }
+
+      return scoredListings
+    }
+
+    return listings
+  }, [filteredListings, favorites, activeBottomTab, userPreferences, matchFilter])
+
+  // Get perfect matches (90+ score) for special highlighting
+  const topMatches = useMemo(() => {
+    const hasPreferences = userPreferences.location || userPreferences.maxBudget
+    if (!hasPreferences || displayedListings.length === 0) return []
+
+    return displayedListings.filter(
+      (listing) => listing.matchScore && listing.matchScore.overall >= 90
+    )
+  }, [displayedListings, userPreferences])
+
+  const groupedListings: Array<{ title: string; items: Listing[] }> = useMemo(() => {
+    const listingMap = new globalThis.Map<string, Listing[]>()
     for (const l of displayedListings) {
       const key = l.section || 'Stays for you'
-      const arr = map.get(key) ?? []
+      const arr = listingMap.get(key) ?? []
       arr.push(l)
-      map.set(key, arr)
+      listingMap.set(key, arr)
     }
-    return Array.from(map.entries()).map(([title, items]) => ({
+    return Array.from(listingMap.entries()).map(([title, items]) => ({
       title,
       items,
     }))
@@ -401,6 +491,11 @@ const App: React.FC = () => {
           />
         )}
 
+        {/* Messaging modal */}
+        {showMessaging && (
+          <MessagingContainer onClose={() => setShowMessaging(false)} />
+        )}
+
       <div className="nm-phone">
         <main className="nm-screen-content nm-fade-in">
           {/* HEADER: search pill + category tabs */}
@@ -466,7 +561,20 @@ const App: React.FC = () => {
           </NeumoCard>
 
           {viewMode === 'nurse' ? (
-            activeCategory === 'nurses' ? (
+            activeCategory === 'hospitals' ? (
+              <HospitalsView
+                hospitals={demoHospitals}
+                onSelectHospital={(hospital) => {
+                  // TODO: Show hospital detail modal
+                  console.log('Selected hospital:', hospital)
+                }}
+                onViewHousingForHospital={(hospital) => {
+                  // Switch to housing tab and filter by hospital
+                  setActiveCategory('housing')
+                  setHospitalOrCity(hospital.name)
+                }}
+              />
+            ) : activeCategory === 'nurses' ? (
               !profile ? (
                 <NeumoCard>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center', padding: 16 }}>
@@ -569,41 +677,92 @@ const App: React.FC = () => {
                   <div
                     style={{
                       display: 'flex',
-                      justifyContent: 'flex-end',
-                      gap: 6,
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 8,
                       marginBottom: 8,
                     }}
                   >
-                    <button
-                      type="button"
-                      className={
-                        'nm-pill ' +
-                        (viewLayout === 'list' ? 'nm-pill--active' : '')
-                      }
-                      style={{
-                        fontSize: 11,
-                        paddingInline: 12,
-                        paddingBlock: 6,
-                      }}
-                      onClick={() => setViewLayout('list')}
-                    >
-                      List
-                    </button>
-                    <button
-                      type="button"
-                      className={
-                        'nm-pill ' +
-                        (viewLayout === 'map' ? 'nm-pill--active' : '')
-                      }
-                      style={{
-                        fontSize: 11,
-                        paddingInline: 12,
-                        paddingBlock: 6,
-                      }}
-                      onClick={() => setViewLayout('map')}
-                    >
-                      Map
-                    </button>
+                    {/* Match quality filter (only show when matches exist) */}
+                    {displayedListings.some((l) => l.matchScore) && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className={
+                            'nm-pill ' + (matchFilter === 'all' ? 'nm-pill--active' : '')
+                          }
+                          style={{
+                            fontSize: 11,
+                            paddingInline: 12,
+                            paddingBlock: 6,
+                          }}
+                          onClick={() => setMatchFilter('all')}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            'nm-pill ' + (matchFilter === 'great' ? 'nm-pill--active' : '')
+                          }
+                          style={{
+                            fontSize: 11,
+                            paddingInline: 12,
+                            paddingBlock: 6,
+                          }}
+                          onClick={() => setMatchFilter('great')}
+                        >
+                          Great+ (75%)
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            'nm-pill ' +
+                            (matchFilter === 'perfect' ? 'nm-pill--active' : '')
+                          }
+                          style={{
+                            fontSize: 11,
+                            paddingInline: 12,
+                            paddingBlock: 6,
+                          }}
+                          onClick={() => setMatchFilter('perfect')}
+                        >
+                          Perfect (90%)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* View layout toggle */}
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                      <button
+                        type="button"
+                        className={
+                          'nm-pill ' + (viewLayout === 'list' ? 'nm-pill--active' : '')
+                        }
+                        style={{
+                          fontSize: 11,
+                          paddingInline: 12,
+                          paddingBlock: 6,
+                        }}
+                        onClick={() => setViewLayout('list')}
+                      >
+                        List
+                      </button>
+                      <button
+                        type="button"
+                        className={
+                          'nm-pill ' + (viewLayout === 'map' ? 'nm-pill--active' : '')
+                        }
+                        style={{
+                          fontSize: 11,
+                          paddingInline: 12,
+                          paddingBlock: 6,
+                        }}
+                        onClick={() => setViewLayout('map')}
+                      >
+                        Map
+                      </button>
+                    </div>
                   </div>
 
                   {/* Empty state for Favorites tab in list view */}
@@ -623,6 +782,58 @@ const App: React.FC = () => {
                   {viewLayout === 'list' ? (
                     // Original LIST VIEW (unchanged)
                     <>
+                      {/* Top Matches Section */}
+                      {topMatches.length > 0 && (
+                        <section style={{ marginBottom: 18 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              marginBottom: 8,
+                            }}
+                          >
+                            <span style={{ fontSize: 18 }}>🎯</span>
+                            <h2
+                              className="nm-heading-lg"
+                              style={{ fontSize: 16, margin: 0 }}
+                            >
+                              Perfect Matches For You
+                            </h2>
+                            <span
+                              className="nm-tag"
+                              style={{
+                                background: 'linear-gradient(135deg, #10B981, #14B8A6)',
+                                color: 'white',
+                                fontSize: 10,
+                              }}
+                            >
+                              {topMatches.length}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 10,
+                            }}
+                          >
+                            {topMatches.map((listing) => (
+                              <NeumoCard key={listing.id}>
+                                <ListingCard
+                                  listing={listing}
+                                  isFavorite={favorites.includes(listing.id)}
+                                  onToggleFavorite={() =>
+                                    handleToggleFavorite(listing.id)
+                                  }
+                                  onOpen={() => handleOpenListing(listing)}
+                                />
+                              </NeumoCard>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
                       {groupedListings.map((group) => (
                         <section key={group.title} style={{ marginBottom: 18 }}>
                           <h2
@@ -684,97 +895,26 @@ const App: React.FC = () => {
                               color: '#6b7280',
                             }}
                           >
-                            Tap a pin or card to open details.
+                            {displayedListings.length === 0
+                              ? 'No results to show'
+                              : 'Click markers for details'}
                           </span>
                         </div>
 
-                        {/* Fake map background with pins */}
+                        {/* Real Mapbox map */}
                         <div
                           style={{
-                            position: 'relative',
                             borderRadius: 24,
                             overflow: 'hidden',
-                            height: 260,
-                            background:
-                              'radial-gradient(circle at 20% 0%, #dbeafe 0, #a5b4fc 30%, #0f172a 100%)',
+                            height: 360,
                             boxShadow:
                               '0 18px 40px rgba(15,23,42,0.45), -4px -4px 12px rgba(255,255,255,0.9)',
                           }}
                         >
-                          <div
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              backgroundImage:
-                                'radial-gradient(circle at 20% 30%, rgba(56,189,248,0.35) 0, transparent 55%), radial-gradient(circle at 80% 70%, rgba(52,211,153,0.35) 0, transparent 55%)',
-                              opacity: 0.85,
-                            }}
+                          <Map
+                            listings={displayedListings}
+                            onListingClick={handleOpenListing}
                           />
-                          {displayedListings.length === 0 ? (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                fontSize: 12,
-                                textAlign: 'center',
-                                paddingInline: 24,
-                              }}
-                            >
-                              No places match these filters yet. Try switching
-                              back to list view or widening your search.
-                            </div>
-                          ) : (
-                            displayedListings
-                              .slice(0, 12)
-                              .map((listing, idx) => {
-                                const row = Math.floor(idx / 4)
-                                const col = idx % 4
-                                const top = 18 + row * 18
-                                const left = 10 + col * 20
-                                return (
-                                  <button
-                                    key={listing.id}
-                                    type="button"
-                                    onClick={() => handleOpenListing(listing)}
-                                    style={{
-                                      position: 'absolute',
-                                      top: `${top}%`,
-                                      left: `${left}%`,
-                                      transform: 'translate(-50%, -50%)',
-                                      borderRadius: 999,
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      padding: '6px 10px',
-                                      background:
-                                        'linear-gradient(135deg,#6366f1,#ec4899)',
-                                      color: 'white',
-                                      fontSize: 10,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                      boxShadow:
-                                        '0 12px 26px rgba(15,23,42,0.6)',
-                                    }}
-                                  >
-                                    <span>📍</span>
-                                    <span
-                                      style={{
-                                        maxWidth: 80,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                      }}
-                                    >
-                                      {listing.city}
-                                    </span>
-                                  </button>
-                                )
-                              })
-                          )}
                         </div>
 
                         {/* Horizontal scroll of cards under map */}
@@ -893,6 +1033,21 @@ const App: React.FC = () => {
             🔍
           </button>
           <button
+            className="nm-bottom-icon"
+            type="button"
+            onClick={() => {
+              if (profile) {
+                setShowMessaging(true)
+              } else {
+                toast.error('Please sign in to view messages')
+                setAuthModalMode('signin')
+                setShowAuthModal(true)
+              }
+            }}
+          >
+            💬
+          </button>
+          <button
             className={
               'nm-bottom-icon ' +
               (activeBottomTab === 'favorites'
@@ -976,6 +1131,30 @@ const ListingCard: React.FC<{
             Guest favorite
           </div>
         )}
+        {listing.matchScore && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 10,
+              left: 10,
+              padding: '6px 12px',
+              borderRadius: 999,
+              background: getMatchColor(listing.matchScore.overall),
+              color: 'white',
+              fontSize: 11,
+              fontWeight: 700,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span>{Math.round(listing.matchScore.overall)}%</span>
+            <span style={{ fontSize: 9, opacity: 0.9 }}>
+              {getMatchLabel(listing.matchScore.overall)}
+            </span>
+          </div>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -1053,6 +1232,47 @@ const ListingCard: React.FC<{
             </span>
           ))}
         </div>
+
+        {listing.matchScore && listing.matchScore.reasons.length > 0 && (
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: '1px solid rgba(148,163,184,0.15)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 600,
+                color: getMatchColor(listing.matchScore.overall),
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 6,
+              }}
+            >
+              Why this matches
+            </div>
+            {listing.matchScore.reasons.map((reason, idx) => (
+              <div
+                key={idx}
+                style={{
+                  fontSize: 10,
+                  color: '#6b7280',
+                  marginBottom: 3,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 4,
+                }}
+              >
+                <span style={{ color: getMatchColor(listing.matchScore!.overall) }}>
+                  •
+                </span>
+                <span>{reason}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </button>
   )

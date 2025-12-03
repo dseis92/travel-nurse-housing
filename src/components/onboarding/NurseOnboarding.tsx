@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { OnboardingContainer } from './OnboardingContainer';
 import { OnboardingCard } from './OnboardingCard';
 import { VisualChoice } from './VisualChoice';
+import { ConfettiCelebration } from './ConfettiCelebration';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
@@ -305,10 +306,46 @@ function SpecialtiesStep({ isActive, onNext, onSkip }: any) {
 
 // Step 6: Complete
 function CompleteStep({ isActive, onNext }: any) {
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  useEffect(() => {
+    if (isActive) {
+      setShowConfetti(true);
+    }
+  }, [isActive]);
+
   return (
     <OnboardingCard isActive={isActive} onNext={() => onNext({})} nextLabel="Start exploring! 🎉" isLastStep>
+      {showConfetti && <ConfettiCelebration />}
+
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>✨</div>
+        <div
+          style={{
+            fontSize: 64,
+            marginBottom: 16,
+            animation: 'celebrate 1s ease-in-out',
+          }}
+        >
+          ✨
+        </div>
+
+        <style>
+          {`
+            @keyframes celebrate {
+              0% {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+              }
+              50% {
+                transform: scale(1.3) rotate(10deg);
+              }
+              100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+              }
+            }
+          `}
+        </style>
         <h2 className="nm-heading-lg" style={{ fontSize: 28, marginBottom: 12 }}>
           You're all set!
         </h2>

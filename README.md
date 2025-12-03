@@ -1,183 +1,266 @@
-NightShift Housing — Mobile-First Travel Nurse Housing App
+# Nursery — Mobile-First Travel Nurse Housing Platform
 
-Airbnb-style housing marketplace for travel nurses & hosts
+**Airbnb-style housing marketplace for travel nurses & hosts**
 
-Tech Stack: React + TypeScript + Vite + Custom Neumorphic UI + Zero Backend
+**Tech Stack:** React + TypeScript + Vite + Supabase + Mapbox + Custom Neumorphic UI + Progressive Web App
 
-⸻
+---
 
-🚀 Project Overview
+## 🚀 Project Overview
 
-NightShift Housing is a mobile-first, app-like React application designed specifically for travel nurses to find safe, reliable mid-term housing near hospitals. The app mimics the Airbnb mobile experience while adding nurse-specific workflows, filters, onboarding, and user flows.
+Nursery is a mobile-first, app-like React application designed specifically for travel nurses to find safe, reliable mid-term housing near hospitals. The app mimics the Airbnb mobile experience while adding nurse-specific workflows, filters, onboarding, smart matching, and user flows.
 
 It also includes host tools, allowing property owners to list and manage nurse-friendly housing.
 
 This project is structured as a single-page React application using:
-	•	React 18
-	•	TypeScript
-	•	Vite
-	•	Custom Neumorphism UI Kit
-	•	LocalStorage state persistence
-	•	Fully client-side logic (no backend yet)
-	•	Lightweight modal + animation engine
+- React 18
+- TypeScript
+- Vite
+- Supabase (authentication, database, real-time)
+- Mapbox GL JS (interactive maps)
+- Custom Neumorphism UI Kit
+- Progressive Web App (PWA) support
+- Smart matching algorithm
+- Real-time messaging infrastructure
 
-The UI is heavily influenced by Airbnb Mobile, but themed in a gradient, soft-neumorphic aesthetic.
+The UI is heavily influenced by Airbnb Mobile, but themed in a gradient, soft-neumorphic aesthetic optimized for healthcare workers.
 
-This repository represents a fully interactive prototype ready to be converted into a production app (React Native, Expo, or full-stack Next.js).
+---
 
-⸻
-
-🌟 Core Features / What’s Already Built
+## 🌟 Core Features / What's Already Built
 
 Everything below is already implemented in the current codebase.
 
-⸻
+---
 
-✅ 1. Role Selection Screen (“Who’s Signing In”)
+### ✅ 1. Role-Based Authentication & Onboarding
 
-Before entering the app, the user chooses:
-	•	👩‍⚕️ Travel Nurse
-	•	🏡 Host
+**Role Selection**
+- Users choose their role: 👩‍⚕️ Travel Nurse or 🏡 Host
+- Role determines available features and UI
+- Integrated with Supabase authentication
+- Users can switch roles through profile settings
 
-This determines the UI and available tools.
+**Nurse Onboarding**
+- Multi-step onboarding flow with visual progress indicators
+- Collects: name, assignment location, contract dates, budget, room preferences
+- Animated choice cards with hover effects
+- Confetti celebration on completion
+- Preferences stored in Supabase user profiles
 
-The user can switch roles later through the bottom nav → Profile.
+**Host Onboarding**
+- Property type selection (entire place, private room, shared)
+- Location and amenities capture
+- Verification status tracking
+- Stored in Supabase for listing management
 
-⸻
+---
 
-✅ 2. Nurse Onboarding System
+### ✅ 2. Smart Matching System
 
-A mobile, multi-step onboarding flow that stores preferences in localStorage:
-	•	Name
-	•	Assignment location
-	•	Contract start/end dates
-	•	Budget
-	•	Preferred room type
+**Intelligent Recommendations**
+- Calculates 0-100 match scores based on:
+  - Location proximity to hospital
+  - Price fit within budget
+  - Amenities and room type preferences
+  - Availability for contract dates
+- Color-coded match badges on listing images
+- Match quality labels (Perfect Match, Great Match, etc.)
+- "Why this matches" section showing top 3 reasons per listing
+- "Perfect Matches For You" section for 90%+ matches
+- Match quality filters: All / Great+ (75%) / Perfect (90%)
 
-These preferences feed into the housing recommendation engine.
+**Match Reasoning**
+- "Perfect location match near [Hospital]"
+- "Great value - $500 under budget"
+- "Only 5 min to hospital"
+- "Has 3 of your preferred amenities"
+- "Available for your dates"
 
-⸻
+---
 
-✅ 3. Housing Feed (Airbnb-style grouped listings)
+### ✅ 3. Interactive Map Integration
 
-The home feed displays property cards that are:
-	•	grouped into section categories (like Airbnb)
-	•	scrollable
-	•	filterable
-	•	visually neumorphic
-	•	fully interactive
+**Real Mapbox Maps**
+- Interactive map view with custom markers
+- Click markers to view listing details
+- Clustering for dense areas
+- Smooth animations and transitions
+- Map/List view toggle
+- Hospital and listing pins
+- Distance calculations
 
-Each listing includes:
-	•	Image
-	•	Rating & review count
-	•	Tags (“Guest Favorite”, “Walk to lake”)
-	•	Price per month
-	•	Distance to hospital
-	•	Room type
-	•	Amenities
+---
 
-⸻
+### ✅ 4. Hospital Directory
 
-✅ 4. Listing Detail Modal (Airbnb mobile layout)
+**Comprehensive Hospital Search**
+- 10 demo hospitals across major US cities
+- Search by hospital name, city, specialty
+- Filter by state and specialty
+- Hospital cards showing:
+  - Ratings and review counts
+  - Open positions and average pay rates
+  - Trauma level and bed count
+  - Teaching hospital designation
+  - Specialties offered
+- "View Housing Nearby" integration
+- List and Map view modes
+- Direct integration with housing search
 
-A full-screen sheet with:
-	•	Entry + exit slide/fade animations
-	•	Large hero image
-	•	Favorite button
-	•	Rating badge
-	•	Pricing block
-	•	Amenities grid
-	•	Perks section
-	•	Nurse-specific tips
-	•	A fake calendar preview UI
-	•	Static map preview with location callout
-	•	“Request to Book” bottom bar
+---
 
-This modal overlays the entire app and dims the background.
+### ✅ 5. Housing Feed (Airbnb-style)
 
-⸻
+**Property Listings**
+- Grouped section categories
+- Scrollable, filterable cards
+- Neumorphic design system
+- Match score badges (when applicable)
+- Rating badges for "Guest Favorite" listings
 
-✅ 5. Search Flow (Start Your Search)
+**Each Listing Shows:**
+- Large image with favorite button
+- Match percentage and quality label
+- Rating & review count
+- Tags (amenities, features)
+- Price per month
+- Distance to hospital
+- Room type
+- Match reasons (when applicable)
 
-A dedicated interactive 3-step search flow:
+---
 
-Step 1 — Where
+### ✅ 6. Listing Detail Modal
 
-Ask for city / hospital.
+**Full-Screen Listing View**
+- Slide/fade animations
+- Large hero image
+- Favorite button
+- Rating badge
+- Pricing block
+- Amenities grid
+- Perks section
+- Nurse-specific tips
+- Calendar preview
+- Static map with location
+- "Request to Book" bottom bar
+- Match breakdown display
 
-Step 2 — When
+---
 
-(Date fields included but availability logic not yet implemented)
+### ✅ 7. Advanced Search & Filtering
 
-Step 3 — Who
+**3-Step Search Flow**
+1. **Where** - City / Hospital selection
+2. **When** - Contract start/end dates
+3. **Who** - Occupancy, pets, preferences
 
-Currently very simple (e.g. pets / basic occupancy).
+**Filter Options:**
+- City / State / Hospital name
+- Max budget slider
+- Room type (entire place, private, shared)
+- Contract dates
+- Match quality (All, Great+, Perfect)
+- Favorites only
 
-✔ After completion the home feed automatically filters results.
-✔ Feed scrolls to the top automatically.
+**Smart Filtering:**
+- Real-time filter application
+- Automatic match scoring when filters active
+- Zero results fallback
+- Scroll to top on filter change
 
-⸻
+---
 
-✅ 6. Filtering Engine (React useMemo)
+### ✅ 8. Real-Time Messaging Infrastructure
 
-Properties can be filtered by:
-	•	City / State / Hospital name
-	•	Max budget
-	•	Room type
-	•	Contract dates
-	•	Favorites only
+**Supabase Messaging Service**
+- Thread creation and management
+- Real-time message subscriptions
+- Message history fetching
+- Typing indicators ready
+- User presence tracking
+- Attachment support
+- System messages
 
-If filters produce zero results, the feed falls back to all listings (never blank).
+---
 
-⸻
+### ✅ 9. Favorites System
 
-✅ 7. Favorites System
+**Bookmarking**
+- Heart icon on every listing card
+- State persistence in localStorage
+- Dedicated Favorites tab in bottom nav
+- Favorites counter
+- Empty state messaging
+- Works with match scoring
 
-Every card has a heart icon.
-Favorite state is stored in React state (no backend yet).
+---
 
-The bottom nav has a dedicated ❤️ Favorites tab.
+### ✅ 10. Bottom Navigation (App-like)
 
-⸻
+**Mobile Navigation Bar:**
+- 🏠 Home (Housing feed)
+- 🔍 Search (Filter modal)
+- 🏥 Hospitals (Directory)
+- ❤️ Favorites (Saved listings)
+- 👤 Profile / Role Switcher
 
-✅ 8. Host Dashboard
+**Smart Navigation:**
+- Role-aware bottom nav
+- Active state indicators
+- Smooth tab transitions
+- Deep linking ready
 
-When the user selects Host, they see a placeholder dashboard that will later become:
-	•	Listing management
-	•	Calendar
-	•	Requests
-	•	Messaging
-	•	Earnings overview
+---
 
-The entire file is ready for expansion.
+### ✅ 11. Custom Neumorphic UI Kit
 
-⸻
+**Reusable Components:**
+- NeumoCard (soft shadow containers)
+- Neumo pills (filter buttons)
+- Search pills
+- Gradient buttons
+- Tag badges
+- Bottom sheets
+- Modals with backdrop
+- Animated choice cards
+- Confetti celebrations
 
-✅ 9. Bottom Navigation (App-like)
+**Design System:**
+- Consistent spacing and sizing
+- Gradient backgrounds
+- Soft shadows (inner and outer)
+- Smooth animations
+- Mobile-optimized touch targets
 
-A bottom navigation bar that mimics mobile app UX:
-	•	🏠 Home
-	•	🔍 Search
-	•	❤️ Favorites
-	•	👤 Profile / Role Switcher
+---
 
-All tabs animate and update the main view.
+### ✅ 12. Progressive Web App (PWA)
 
-⸻
+**Installation:**
+- Service worker for offline support
+- App manifest with icons
+- Install prompts on mobile
+- Splash screens
+- Standalone mode
+- Optimized caching strategy
 
-✅ 10. Full Custom UI Kit (Neumorphic theme)
+---
 
-Custom reusable components in /src/neumo/NeumoKit:
-	•	NeumoCard
-	•	NeumoPill
-	•	Search pill
-	•	Gradient buttons
-	•	Soft shadows
-	•	Rounded frames
-	•	neumorphic grid cards
+### ✅ 13. Supabase Integration
 
-The entire UI is built from this system.
-📱 UI Philosophy & Design
+**Backend Services:**
+- User authentication (email/password)
+- User profiles with role management
+- Real-time database subscriptions
+- Row-level security policies
+- Session management
+- Sign out functionality
+
+---
+
+## 📱 UI Philosophy & Design
 
 The UI is engineered to feel like:
 
@@ -185,85 +268,171 @@ The UI is engineered to feel like:
 ✔ Soft, gradient, relaxing visuals
 ✔ Airbnb-level card design
 ✔ Smooth modals & transitions
+✔ Smart recommendations that feel personalized
 ✔ Easy readability for healthcare workers on night shifts
 
-⸻
+---
 
-🔧 Tech Stack
+## 🔧 Tech Stack
 
-Frontend
-	•	React 18
-	•	TypeScript
-	•	Vite
-	•	Custom CSS (no frameworks)
-	•	Inline styles + component styles
-	•	Neumorphic UI Kit
+**Frontend**
+- React 18
+- TypeScript
+- Vite
+- Custom CSS (neumorphic design system)
+- Progressive Web App
 
-State & Storage
-	•	React useState, useEffect, useMemo
-	•	LocalStorage (for onboarding data)
+**Backend & Services**
+- Supabase (auth, database, real-time)
+- Mapbox GL JS (maps)
+- React Hot Toast (notifications)
 
-Animations
-	•	Pure CSS transitions
-	•	No animation libraries needed yet
+**State Management**
+- React useState, useEffect, useMemo
+- LocalStorage (favorites, preferences)
+- Supabase real-time subscriptions
 
-No Backend
-	•	No auth
-	•	No API calls
-	•	No database
+**Animations**
+- Pure CSS transitions
+- React-based confetti
+- Smooth modal animations
 
-Future-ready for:
-	•	Supabase
-	•	Firebase
-	•	Express.js
-	•	Next.js
+---
 
-⸻
+## 🔜 Features Still Needed
 
-🏁 Future Directions (for Codex)
+### 🚧 High Priority
 
-Codex / future developers can expand into:
+1. **Real Listings Database**
+   - Migrate from demo data to Supabase
+   - Create listings table with proper schema
+   - Image upload and storage
+   - Host listing creation UI
+   - Listing editing and management
 
-🔜 1. Real backend
-	•	Supabase or Firebase for listings, users, favorites
+2. **Booking System**
+   - Request to book flow
+   - Booking confirmation
+   - Calendar availability management
+   - Booking status tracking (pending, accepted, declined)
+   - Hold expiration logic
 
-🔜 2. Authentication
-	•	Email login
-	•	Nurse licensing verification
-	•	Host verification
+3. **In-App Messaging UI**
+   - Message thread list view
+   - Chat interface
+   - Real-time message updates
+   - Typing indicators
+   - Read receipts
+   - Image attachments
 
-🔜 3. Real calendar availability
-	•	Sync with contracts
-	•	Host availability calendars
+4. **Payment Integration**
+   - Stripe Connect for hosts
+   - Booking payment processing
+   - Platform fees calculation
+   - Host payouts
+   - Payment history
+   - Refund handling
 
-🔜 4. In-app messaging
-	•	Nurse ↔ Host secure messaging
+5. **Calendar System**
+   - Interactive date picker
+   - Availability blocking for hosts
+   - Multi-month view
+   - Contract date validation
+   - Booking overlap prevention
 
-🔜 5. Map search (Google / Mapbox)
+### 🎨 Medium Priority
 
-🔜 6. Payment integration
-	•	Stripe Connect for hosts
-	•	Secure booking fees
+6. **User Verification**
+   - Nurse license verification
+   - Document upload
+   - ID verification
+   - Host verification badges
+   - Background checks integration
 
-⸻
+7. **Reviews & Ratings**
+   - Post-stay review system
+   - Star ratings
+   - Written reviews
+   - Host responses
+   - Review moderation
+   - Aggregate rating calculations
 
-🧰 New scaffolding (in progress)
-	•	Domain models for listings, bookings, messaging, payments, and verification now live in src/types.ts.
-	•	Availability-aware demo listings moved to src/data/demoListings.ts with host verification, pet flags, contract lengths, and coordinates for future map search.
-	•	Shared availability helper in src/lib/availability.ts so filters can respect contract windows.
-	•	Platform services stub in src/services/platform.ts to centralize auth, bookings, payments, messaging, and map search calls; swap this out for Supabase/Firebase/Next.js when ready.
+8. **Profile Management**
+   - User profile editing
+   - Avatar upload
+   - Bio and specialties
+   - Preferred cities
+   - Contact information
+   - Privacy settings
 
-⸻
+9. **Host Dashboard**
+   - Listing performance analytics
+   - Earnings overview
+   - Booking calendar
+   - Request management
+   - Review management
+   - Payout tracking
 
-🔑 Summary for Developers
+10. **Advanced Search**
+    - Map-based search with boundary filtering
+    - Saved searches
+    - Search alerts
+    - Price range histograms
+    - Availability calendar overlay
+    - Commute time calculator
+
+### 🔮 Future Enhancements
+
+11. **Social Features**
+    - Nurse community forum
+    - Hospital reviews from nurses
+    - Recommendation sharing
+    - Travel nurse groups by specialty
+    - Tips and advice section
+
+12. **Smart Features**
+    - Price predictions
+    - Booking recommendations
+    - Optimal booking time suggestions
+    - Contract length optimization
+    - Expense tracking
+
+13. **Mobile App**
+    - React Native conversion
+    - Push notifications
+    - Deep linking
+    - Biometric authentication
+    - Offline mode enhancements
+
+14. **Admin Panel**
+    - User management
+    - Listing moderation
+    - Report handling
+    - Analytics dashboard
+    - Platform settings
+
+15. **Integrations**
+    - Hospital staffing platforms
+    - Travel nurse agencies
+    - Background check services
+    - Insurance verification
+    - Electronic signature
+
+---
+
+## 🔑 Summary for Developers
 
 This project is:
-	•	A mobile-first React prototype
-	•	Using a custom-designed neumorphic UI system
-	•	Includes listings, search, onboarding, host tools, favorites, and full listing details
-	•	All logic is self-contained inside the React app
-	•	No backend — but designed to scale into one
+- A mobile-first React application with production-ready UI
+- Using Supabase for authentication and real-time features
+- Includes smart matching algorithm for personalized recommendations
+- Real Mapbox integration for interactive maps
+- Hospital directory with comprehensive search
+- Progressive Web App with offline support
+- Custom neumorphic design system throughout
+- Type-safe TypeScript implementation
+- Messaging infrastructure ready for UI
 
-Codex should treat this project as:
+**Current State:** Fully working UX foundation with smart matching, maps, and real-time capabilities. Ready to add booking system, payments, and expand into production-grade platform.
 
-👉 A fully working UX foundation that is ready to evolve into a production-grade mobile or web app.
+**Next Steps:** Implement booking flow, add real listings management, build messaging UI, integrate Stripe payments.

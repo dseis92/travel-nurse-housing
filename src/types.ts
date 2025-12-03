@@ -75,8 +75,24 @@ export type Listing = {
   parking?: 'street' | 'garage' | 'driveway'
   safetyFeatures?: string[]
   coordinates?: { lat: number; lng: number }
+  latitude?: number
+  longitude?: number
   contractLengths?: number[]
   availability?: Array<{ start: string; end: string }>
+  availableFrom?: string
+  availableTo?: string
+  // Smart matching
+  matchScore?: {
+    overall: number
+    breakdown: {
+      location: number
+      price: number
+      amenities: number
+      availability: number
+    }
+    reasons: string[]
+    isPerfectMatch: boolean
+  }
 }
 
 export type BookingStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
@@ -117,4 +133,38 @@ export type PaymentQuote = {
   platformFee: number
   hostPayout: number
   currency: string
+}
+
+export type Hospital = {
+  id: number
+  name: string
+  city: string
+  state: string
+  address: string
+  latitude: number
+  longitude: number
+  traumaLevel?: 'I' | 'II' | 'III' | 'IV' | 'V'
+  bedCount?: number
+  facilityType: 'Academic Medical Center' | 'Community Hospital' | 'Critical Access' | 'Specialty Hospital'
+  specialties: string[]
+  isTeachingHospital: boolean
+  rating?: number
+  reviewCount?: number
+  openPositions?: number
+  averagePayRate?: number
+  imageUrl?: string
+}
+
+export type HospitalReview = {
+  id: string
+  hospitalId: number
+  nurseName: string
+  rating: number
+  specialty: string
+  contractLength: string
+  createdAt: string
+  wouldRecommend: boolean
+  pros: string[]
+  cons: string[]
+  comment?: string
 }

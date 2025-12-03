@@ -27,9 +27,11 @@ export function OnboardingCard({
         left: 0,
         right: 0,
         opacity: isActive ? 1 : 0,
-        transform: isActive ? 'translateX(0) scale(1)' : 'translateX(20px) scale(0.95)',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isActive ? 'translateX(0) scale(1) rotateY(0deg)' : 'translateX(40px) scale(0.9) rotateY(10deg)',
+        transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
         pointerEvents: isActive ? 'auto' : 'none',
+        transformStyle: 'preserve-3d',
+        perspective: 1000,
       }}
     >
       <div

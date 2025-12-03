@@ -41,6 +41,11 @@ export function OnboardingContainer({ steps, onComplete, onClose }: OnboardingCo
     }
   };
 
+  // Dynamic background colors that shift with progress
+  const backgroundGradient = `linear-gradient(135deg,
+    hsl(${220 + progress * 0.3}, 70%, ${90 - progress * 0.1}%) 0%,
+    hsl(${240 + progress * 0.5}, 60%, ${85 - progress * 0.1}%) 100%)`;
+
   return (
     <div
       style={{
@@ -49,12 +54,52 @@ export function OnboardingContainer({ steps, onComplete, onClose }: OnboardingCo
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+        background: backgroundGradient,
+        transition: 'background 0.6s ease',
         zIndex: 9999,
         overflow: 'auto',
         padding: '40px 20px',
       }}
     >
+      {/* Floating background shapes */}
+      <div style={{
+        position: 'absolute',
+        top: '10%',
+        left: '5%',
+        width: 200,
+        height: 200,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)',
+        filter: 'blur(40px)',
+        animation: 'float 6s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '15%',
+        right: '10%',
+        width: 250,
+        height: 250,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)',
+        filter: 'blur(40px)',
+        animation: 'float 8s ease-in-out infinite reverse',
+      }} />
+
+      <style>
+        {`
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0) translateX(0);
+            }
+            33% {
+              transform: translateY(-20px) translateX(10px);
+            }
+            66% {
+              transform: translateY(10px) translateX(-10px);
+            }
+          }
+        `}
+      </style>
       {/* Header with Progress */}
       <div style={{ maxWidth: 560, margin: '0 auto 32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -110,25 +155,54 @@ export function OnboardingContainer({ steps, onComplete, onClose }: OnboardingCo
           )}
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar with glow */}
         <div
           style={{
-            height: 4,
+            height: 6,
             background: 'rgba(148,163,184,0.2)',
-            borderRadius: 4,
-            overflow: 'hidden',
+            borderRadius: 8,
+            overflow: 'visible',
+            position: 'relative',
           }}
         >
           <div
             style={{
               height: '100%',
-              background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)',
-              borderRadius: 4,
+              background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+              borderRadius: 8,
               width: `${progress}%`,
-              transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              boxShadow: `0 0 20px rgba(99, 102, 241, ${progress / 200})`,
+              position: 'relative',
             }}
-          />
+          >
+            {/* Animated shine effect */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)',
+                animation: 'shine 2s ease-in-out infinite',
+              }}
+            />
+          </div>
         </div>
+
+        <style>
+          {`
+            @keyframes shine {
+              0% {
+                transform: translateX(-100%);
+              }
+              100% {
+                transform: translateX(200%);
+              }
+            }
+          `}
+        </style>
 
         {/* Step Counter */}
         <div
