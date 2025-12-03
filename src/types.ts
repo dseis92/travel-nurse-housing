@@ -72,7 +72,7 @@ export type Listing = {
   // New attributes for upcoming features
   verifiedHost?: boolean
   allowsPets?: boolean
-  parking?: 'street' | 'garage' | 'driveway'
+  parking?: 'street' | 'garage' | 'driveway' | 'none'
   safetyFeatures?: string[]
   coordinates?: { lat: number; lng: number }
   latitude?: number

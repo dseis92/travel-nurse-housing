@@ -13,10 +13,8 @@ interface MessagingContainerProps {
 export function MessagingContainer({ onClose }: MessagingContainerProps) {
   const { profile } = useAuthStore()
   const [threads, setThreads] = useState<MessageThreadType[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [threadMessages, setThreadMessages] = useState<Message[]>([])
-  const [loadingMessages, setLoadingMessages] = useState(false)
 
   // Mock user lookup - in a real app, you'd fetch this from your backend
   const getUserById = (id: string): UserProfile | undefined => {
@@ -35,14 +33,11 @@ export function MessagingContainer({ onClose }: MessagingContainerProps) {
 
     const loadThreads = async () => {
       try {
-        setLoading(true)
         const userThreads = await messagingService.getUserThreads(profile.id)
         setThreads(userThreads)
       } catch (error) {
         console.error('Error loading threads:', error)
         toast.error('Failed to load messages')
-      } finally {
-        setLoading(false)
       }
     }
 
@@ -51,7 +46,7 @@ export function MessagingContainer({ onClose }: MessagingContainerProps) {
     // Subscribe to new messages for notifications
     const unsubscribe = messagingService.subscribeToUserThreads(
       profile.id,
-      (message) => {
+      () => {
         // Reload threads when a new message arrives
         loadThreads()
       }
@@ -66,15 +61,12 @@ export function MessagingContainer({ onClose }: MessagingContainerProps) {
     if (!profile?.id) return
 
     try {
-      setLoadingMessages(true)
       setSelectedThreadId(threadId)
       const messages = await messagingService.getThreadMessages(threadId)
       setThreadMessages(messages)
     } catch (error) {
       console.error('Error loading messages:', error)
       toast.error('Failed to load messages')
-    } finally {
-      setLoadingMessages(false)
     }
   }
 

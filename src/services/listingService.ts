@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import type { Listing } from '../types'
+export type { Listing } from '../types'
 
 export interface ListingRow {
   id: string

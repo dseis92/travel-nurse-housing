@@ -123,10 +123,10 @@ export function CreateListingForm({
     'Walkable',
   ]
 
-  const toggleArrayItem = (
-    array: string[],
-    item: string,
-    setter: (value: string[]) => void
+  const toggleArrayItem = <T,>(
+    array: T[],
+    item: T,
+    setter: (value: T[]) => void
   ) => {
     if (array.includes(item)) {
       setter(array.filter((i) => i !== item))

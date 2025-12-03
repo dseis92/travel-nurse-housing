@@ -11,9 +11,6 @@ import { platformServices } from './services/platform'
 import { useAuthStore } from './stores/authStore'
 import { authService } from './services/authService'
 import { fetchListings } from './services/listingService'
-import { HostListings } from './components/host/HostListings'
-import { CreateListingForm } from './components/host/CreateListingForm'
-import { EditListingForm } from './components/host/EditListingForm'
 import { AuthModal } from './components/auth/AuthModal'
 import { NurseVerification } from './components/verification/NurseVerification'
 import { BookingRequestForm } from './components/booking/BookingRequestForm'
@@ -72,14 +69,12 @@ const USE_SUPABASE_LISTINGS = false
 const App: React.FC = () => {
   // State for listings (demo or Supabase)
   const [listings, setListings] = useState<Listing[]>(demoListings)
-  const [loadingListings, setLoadingListings] = useState(false)
 
   // Load listings from Supabase if enabled
   useEffect(() => {
     if (USE_SUPABASE_LISTINGS) {
       const loadSupabaseListings = async () => {
         try {
-          setLoadingListings(true)
           const data = await fetchListings()
           setListings(data)
         } catch (error) {
@@ -87,7 +82,6 @@ const App: React.FC = () => {
           // Fallback to demo listings on error
           setListings(demoListings)
         } finally {
-          setLoadingListings(false)
         }
       }
       loadSupabaseListings()
@@ -133,10 +127,6 @@ const App: React.FC = () => {
 
   // Match quality filter
   const [matchFilter, setMatchFilter] = useState<'all' | 'perfect' | 'great'>('all')
-
-  // Host listing management
-  const [showCreateListing, setShowCreateListing] = useState(false)
-  const [editingListing, setEditingListing] = useState<Listing | null>(null)
 
   // selected listing for detail modal
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
