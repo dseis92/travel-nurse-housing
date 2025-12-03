@@ -14,6 +14,8 @@ export default defineConfig({
         'apple-touch-icon.png',
       ],
       workbox: {
+        // Terser crashes while minifying the generated service worker, so keep it in dev mode
+        mode: 'development',
         // Increase the chunk size limit to avoid precache warnings
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

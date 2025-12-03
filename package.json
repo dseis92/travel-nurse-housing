@@ -23,6 +23,7 @@
     "react-hook-form": "^7.67.0",
     "react-hot-toast": "^2.6.0",
     "react-map-gl": "^8.1.0",
+    "vercel": "^48.12.1",
     "zod": "^4.1.13",
     "zustand": "^5.0.8"
   },
