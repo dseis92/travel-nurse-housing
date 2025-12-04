@@ -4,11 +4,12 @@ import { EarningsOverview } from './EarningsOverview'
 import { ListingPerformance } from './ListingPerformance'
 import { BookingRequests } from './BookingRequests'
 import { CreateListingForm } from './CreateListingForm'
+import { PayoutSettings } from './PayoutSettings'
 import { hostAnalyticsService, type DashboardStats } from '../../services/hostAnalyticsService'
 import { useAuthStore } from '../../stores/authStore'
 import toast from 'react-hot-toast'
 
-type Tab = 'overview' | 'requests' | 'listings' | 'create-listing'
+type Tab = 'overview' | 'requests' | 'listings' | 'create-listing' | 'payouts'
 
 export function HostDashboard() {
   const { profile } = useAuthStore()
@@ -214,6 +215,13 @@ export function HostDashboard() {
         >
           🏠 Listings
         </button>
+        <button
+          className={`nm-pill ${activeTab === 'payouts' ? 'nm-pill--active' : ''}`}
+          style={{ fontSize: 12 }}
+          onClick={() => setActiveTab('payouts')}
+        >
+          💰 Payouts
+        </button>
         <div style={{ marginLeft: 'auto' }}>
           <button
             className="nm-pill nm-pill--active"
@@ -248,6 +256,8 @@ export function HostDashboard() {
             onCancel={() => setActiveTab('listings')}
           />
         )}
+
+        {activeTab === 'payouts' && <PayoutSettings />}
       </div>
     </div>
   )

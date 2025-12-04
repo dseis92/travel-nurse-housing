@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NeumoCard } from '../../neumo/NeumoKit'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuthStore } from '../../stores/authStore'
+import { PaymentModal } from '../payment/PaymentModal'
 import toast from 'react-hot-toast'
 
 interface Booking {
@@ -30,6 +31,7 @@ export function MyBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const [paymentBooking, setPaymentBooking] = useState<Booking | null>(null)
 
   useEffect(() => {
     if (profile) {
@@ -155,17 +157,17 @@ export function MyBookings() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'ó'
+        return 'ï¿½'
       case 'accepted':
         return ''
       case 'declined':
         return 'L'
       case 'cancelled':
-        return '=«'
+        return '=ï¿½'
       case 'completed':
         return '('
       default:
-        return '=Ë'
+        return '=ï¿½'
     }
   }
 
@@ -177,7 +179,7 @@ export function MyBookings() {
       <div style={{ padding: 16, maxWidth: 600, margin: '0 auto' }}>
         <NeumoCard>
           <div style={{ padding: 24, textAlign: 'center' }}>
-            <p style={{ fontSize: 32, marginBottom: 12 }}>=i•</p>
+            <p style={{ fontSize: 32, marginBottom: 12 }}>=iï¿½</p>
             <p className="nm-heading-lg" style={{ fontSize: 14, marginBottom: 6 }}>
               Nurse Account Required
             </p>
@@ -229,7 +231,7 @@ export function MyBookings() {
           My Bookings
         </h1>
         <p className="nm-body" style={{ fontSize: 12, color: '#6b7280' }}>
-          {pendingCount > 0 && `${pendingCount} pending · `}
+          {pendingCount > 0 && `${pendingCount} pending ï¿½ `}
           {acceptedCount > 0 && `${acceptedCount} accepted`}
         </p>
       </div>
@@ -252,7 +254,7 @@ export function MyBookings() {
       {bookings.length === 0 ? (
         <NeumoCard>
           <div style={{ padding: 32, textAlign: 'center' }}>
-            <p style={{ fontSize: 48, marginBottom: 16 }}>=Ë</p>
+            <p style={{ fontSize: 48, marginBottom: 16 }}>=ï¿½</p>
             <p className="nm-heading-lg" style={{ fontSize: 16, marginBottom: 8 }}>
               No bookings yet
             </p>
@@ -380,7 +382,7 @@ export function MyBookings() {
                     }}
                   >
                     <p className="nm-body" style={{ fontSize: 10, color: '#f97316' }}>
-                      ð Response needed by {formatDate(booking.hold_expires_at)}
+                      ï¿½ Response needed by {formatDate(booking.hold_expires_at)}
                     </p>
                   </div>
                 )}
@@ -429,6 +431,16 @@ export function MyBookings() {
                   </div>
                 )}
 
+                {booking.status === 'accepted' && (
+                  <button
+                    className="nm-gradient-button"
+                    style={{ width: '100%', fontSize: 13 }}
+                    onClick={() => setPaymentBooking(booking)}
+                  >
+                    ðŸ’³ Pay Now
+                  </button>
+                )}
+
                 {/* Created Date */}
                 <p className="nm-body" style={{ fontSize: 9, color: '#9ca3af', textAlign: 'center' }}>
                   Requested on {formatDate(booking.created_at)}
@@ -437,6 +449,33 @@ export function MyBookings() {
             </NeumoCard>
           ))}
         </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentBooking && (
+        <PaymentModal
+          bookingId={paymentBooking.id}
+          totalAmount={paymentBooking.total_price}
+          onSuccess={async () => {
+            // Update booking status to completed
+            try {
+              const { error } = await supabase
+                .from('bookings')
+                .update({ status: 'completed' })
+                .eq('id', paymentBooking.id)
+
+              if (error) throw error
+
+              toast.success('Payment successful! Your booking is confirmed.')
+              setPaymentBooking(null)
+              loadBookings()
+            } catch (error: any) {
+              console.error('Error updating booking status:', error)
+              toast.error('Payment processed but booking update failed')
+            }
+          }}
+          onCancel={() => setPaymentBooking(null)}
+        />
       )}
     </div>
   )
