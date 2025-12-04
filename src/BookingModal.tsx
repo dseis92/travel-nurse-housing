@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import type { FormEvent } from 'react'
-import { supabase } from './supabaseClient'
+import { supabase } from './lib/supabaseClient'
 import { NeumoCard } from './neumo/NeumoKit'
 
 type BookingModalProps = {

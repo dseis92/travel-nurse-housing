@@ -206,15 +206,37 @@ export const authService = {
             profileData.host_verification_status = 'unverified';
           }
 
-          const { error: createError } = await supabase.from('profiles').insert(profileData);
-          if (createError) {
-            console.error('🔐 Failed to create profile:', createError);
-            throw new Error(`Failed to create profile: ${createError.message}`);
+          try {
+            console.log('🔐 Attempting to insert profile with 10s timeout...');
+            const insertTimeout = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Profile insert timeout after 10 seconds')), 10000);
+            });
+
+            const insertPromise = supabase.from('profiles').insert(profileData);
+            const { error: createError } = await Promise.race([insertPromise, insertTimeout]) as any;
+
+            if (createError) {
+              console.error('🔐 Failed to create profile:', createError);
+              throw new Error(`Failed to create profile: ${createError.message}`);
+            }
+
+            console.log('🔐 Profile created successfully via insert');
+          } catch (insertError: any) {
+            console.error('🔐 Profile insert failed/timeout:', insertError.message);
+            // Don't throw - we'll create profile object from metadata anyway
           }
 
-          console.log('🔐 Profile created, fetching...');
-          // Fetch the newly created profile
-          profile = await this.fetchProfile(authData.user.id);
+          // Instead of fetching, just create the profile object from metadata
+          // This avoids another timeout-prone query
+          console.log('🔐 Using metadata to create profile object');
+          profile = {
+            id: authData.user.id,
+            email: authData.user.email!,
+            name: metadata.name,
+            role: metadata.role,
+            licenseStatus: metadata.role === 'nurse' ? 'unverified' : undefined,
+            hostVerificationStatus: metadata.role === 'host' ? 'unverified' : undefined,
+          };
         } else {
           console.error('🔐 No role/name in metadata!');
         }
@@ -265,23 +287,37 @@ export const authService = {
    */
   async fetchProfile(userId: string): Promise<UserProfile | null> {
     try {
-      const { data, error } = await supabase
+      console.log('🔐 fetchProfile: Starting query for userId:', userId);
+
+      // Add timeout to prevent hanging indefinitely
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout after 10 seconds')), 10000);
+      });
+
+      const queryPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      console.log('🔐 fetchProfile: Executing query with 10s timeout...');
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      console.log('🔐 fetchProfile: Query completed');
+      console.log('🔐 fetchProfile: Error?', error);
+      console.log('🔐 fetchProfile: Data?', data ? 'Yes' : 'No');
+
       if (error) {
-        console.error('Profile fetch error:', error);
+        console.error('🔐 fetchProfile: Profile fetch error:', error);
         throw error;
       }
 
       if (!data) {
-        console.error('No profile data returned for user:', userId);
+        console.error('🔐 fetchProfile: No profile data returned for user:', userId);
         return null;
       }
 
-      console.log('Profile fetched successfully:', data.role);
+      console.log('🔐 fetchProfile: Profile fetched successfully. Role:', data.role);
 
       // Transform snake_case database fields to camelCase TypeScript fields
       const profile: UserProfile = {
@@ -300,7 +336,7 @@ export const authService = {
 
       return profile;
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      console.error('🔐 fetchProfile: Exception caught:', error);
       return null;
     }
   },

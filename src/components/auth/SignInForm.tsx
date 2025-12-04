@@ -35,6 +35,7 @@ export function SignInForm({ onSuccess, onSwitchToSignUp }: SignInFormProps) {
 
       if (result.success) {
         toast.success('Welcome back!');
+        setLoading(false);
         onSuccess?.();
       } else {
         toast.error(result.error || 'Failed to sign in');

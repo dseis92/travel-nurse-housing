@@ -49,6 +49,8 @@ export type UserProfile = {
   specialties?: string[]
   preferredCities?: string[]
   bio?: string
+  createdAt?: string
+  lastActiveAt?: string
 }
 
 export type Listing = {

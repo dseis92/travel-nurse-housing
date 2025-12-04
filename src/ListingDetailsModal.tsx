@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NeumoCard } from './neumo/NeumoKit'
-import { supabase } from './supabaseClient'
+import { supabase } from './lib/supabaseClient'
 
 type ListingDetailsProps = {
   listing: {

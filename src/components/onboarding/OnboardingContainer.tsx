@@ -19,14 +19,18 @@ export function OnboardingContainer({ steps, onComplete, onClose }: OnboardingCo
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
   const handleNext = (stepData?: Record<string, any>) => {
+    console.log('📋 OnboardingContainer: handleNext called, currentStepIndex:', currentStepIndex, 'stepData:', stepData);
+
     if (stepData) {
       setFormData((prev) => ({ ...prev, ...stepData }));
     }
 
     if (currentStepIndex < steps.length - 1) {
+      console.log('📋 OnboardingContainer: Moving to next step:', currentStepIndex + 1);
       setCurrentStepIndex((prev) => prev + 1);
     } else {
       // Last step - complete onboarding
+      console.log('📋 OnboardingContainer: Completing onboarding with data:', { ...formData, ...stepData });
       onComplete({ ...formData, ...stepData });
     }
   };

@@ -18,7 +18,11 @@ export function NurseOnboarding({ onComplete, onClose }: NurseOnboardingProps) {
   console.log('🎓 NurseOnboarding rendered!');
 
   const handleComplete = async (data: Record<string, any>) => {
-    if (!user) return;
+    console.log('🎓 NurseOnboarding: handleComplete called with data:', data);
+    if (!user) {
+      console.log('🎓 NurseOnboarding: No user found, cannot complete');
+      return;
+    }
 
     // Update profile with onboarding data
     const updates: any = {};
@@ -35,15 +39,20 @@ export function NurseOnboarding({ onComplete, onClose }: NurseOnboardingProps) {
       updates.bio = data.bio;
     }
 
+    console.log('🎓 NurseOnboarding: Updates to save:', updates);
+
     if (Object.keys(updates).length > 0) {
       const result = await authService.updateProfile(user.id, updates);
       if (!result.success) {
+        console.log('🎓 NurseOnboarding: Failed to save profile');
         toast.error('Failed to save profile');
         return;
       }
+      console.log('🎓 NurseOnboarding: Profile updated successfully');
     }
 
     toast.success('Profile completed! 🎉');
+    console.log('🎓 NurseOnboarding: Calling onComplete()');
     onComplete();
   };
 

@@ -34,9 +34,17 @@ export function AnimatedChoiceCard({
     setMousePosition({ x: 0, y: 0 });
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('🖱️ AnimatedChoiceCard clicked:', label);
+    e.preventDefault();
+    e.stopPropagation();
+    onClick();
+  };
+
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}

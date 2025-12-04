@@ -32,6 +32,7 @@ export function OnboardingCard({
         pointerEvents: isActive ? 'auto' : 'none',
         transformStyle: 'preserve-3d',
         perspective: 1000,
+        zIndex: isActive ? 10 : 1,
       }}
     >
       <div
@@ -77,7 +78,13 @@ export function OnboardingCard({
             )}
 
             <button
-              onClick={onNext}
+              type="button"
+              onClick={(e) => {
+                console.log('🚀 OnboardingCard: Next button clicked, nextLabel:', nextLabel);
+                e.preventDefault();
+                e.stopPropagation();
+                if (onNext) onNext();
+              }}
               className="nm-pill nm-pill--active"
               style={{
                 padding: '12px 32px',
