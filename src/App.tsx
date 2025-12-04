@@ -1863,16 +1863,32 @@ const ListingDetailModal: React.FC<{
           }}
         >
           {showBookingForm ? (
-            <BookingRequestForm
-              listing={listing}
-              hostId={listing.hostId || 'demo-host-id'}
-              onSuccess={() => {
-                setShowBookingForm(false);
-                toast.success('Booking request sent! The host will respond soon.');
-                handleRequestClose();
-              }}
-              onCancel={() => setShowBookingForm(false)}
-            />
+            listing.hostId ? (
+              <BookingRequestForm
+                listing={listing}
+                hostId={listing.hostId}
+                onSuccess={() => {
+                  setShowBookingForm(false);
+                  toast.success('Booking request sent! The host will respond soon.');
+                  handleRequestClose();
+                }}
+                onCancel={() => setShowBookingForm(false)}
+              />
+            ) : (
+              <div style={{ padding: 24, textAlign: 'center' }}>
+                <p style={{ fontSize: 32, marginBottom: 12 }}>ℹ️</p>
+                <p className="nm-body" style={{ fontSize: 14, marginBottom: 16 }}>
+                  This is a demo listing. Real bookings require authenticated hosts.
+                </p>
+                <button
+                  className="nm-gradient-button"
+                  style={{ width: '100%', fontSize: 13 }}
+                  onClick={() => setShowBookingForm(false)}
+                >
+                  Go Back
+                </button>
+              </div>
+            )
           ) : (
             <div
               style={{
