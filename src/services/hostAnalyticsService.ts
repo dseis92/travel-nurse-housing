@@ -300,12 +300,50 @@ export const hostAnalyticsService = {
    * Accept a booking request
    */
   async acceptBooking(bookingId: string): Promise<void> {
+    // Get booking details
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('nurse_id, host_id, listing_id')
+      .eq('id', bookingId)
+      .single()
+
+    if (!booking) throw new Error('Booking not found')
+
+    // Update booking status
     const { error } = await supabase
       .from('bookings')
       .update({ status: 'accepted' })
       .eq('id', bookingId)
 
     if (error) throw error
+
+    // Create message thread if it doesn't exist
+    try {
+      // Check if thread already exists
+      const { data: existingThreads } = await supabase
+        .from('message_threads')
+        .select('id')
+        .eq('listing_id', booking.listing_id)
+        .contains('participant_ids', [booking.nurse_id, booking.host_id])
+
+      if (!existingThreads || existingThreads.length === 0) {
+        // Create new thread
+        const { error: threadError } = await supabase
+          .from('message_threads')
+          .insert({
+            listing_id: booking.listing_id,
+            participant_ids: [booking.nurse_id, booking.host_id],
+          })
+
+        if (threadError) {
+          console.error('Failed to create message thread:', threadError)
+          // Don't throw - booking was already accepted
+        }
+      }
+    } catch (err) {
+      console.error('Error creating message thread:', err)
+      // Don't throw - booking was already accepted
+    }
   },
 
   /**
