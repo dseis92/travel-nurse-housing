@@ -433,6 +433,30 @@ const App: React.FC = () => {
         </button>
       )}
 
+      {/* DEV ONLY: Sign Out Button */}
+      {isDev && profile && (
+        <button
+          onClick={handleSignOut}
+          style={{
+            position: 'fixed',
+            bottom: 80,
+            right: 180,
+            zIndex: 99999,
+            padding: '8px 16px',
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: 'white',
+            border: 'none',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(239,68,68,0.4)',
+          }}
+        >
+          👋 Sign Out ({profile.role})
+        </button>
+      )}
+
       {/* Onboarding Flows */}
       {showOnboardingFlow && profile?.role === 'nurse' && (
         <NurseOnboarding
