@@ -3,11 +3,12 @@ import { NeumoCard } from '../../neumo/NeumoKit'
 import { EarningsOverview } from './EarningsOverview'
 import { ListingPerformance } from './ListingPerformance'
 import { BookingRequests } from './BookingRequests'
+import { CreateListingForm } from './CreateListingForm'
 import { hostAnalyticsService, type DashboardStats } from '../../services/hostAnalyticsService'
 import { useAuthStore } from '../../stores/authStore'
 import toast from 'react-hot-toast'
 
-type Tab = 'overview' | 'requests' | 'listings'
+type Tab = 'overview' | 'requests' | 'listings' | 'create-listing'
 
 export function HostDashboard() {
   const { profile } = useAuthStore()
@@ -172,7 +173,7 @@ export function HostDashboard() {
       ) : null}
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <button
           className={`nm-pill ${activeTab === 'overview' ? 'nm-pill--active' : ''}`}
           style={{ fontSize: 12 }}
@@ -213,6 +214,15 @@ export function HostDashboard() {
         >
           🏠 Listings
         </button>
+        <div style={{ marginLeft: 'auto' }}>
+          <button
+            className="nm-pill nm-pill--active"
+            style={{ fontSize: 12, fontWeight: 600 }}
+            onClick={() => setActiveTab('create-listing')}
+          >
+            ➕ Create Listing
+          </button>
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -227,6 +237,17 @@ export function HostDashboard() {
         {activeTab === 'requests' && <BookingRequests />}
 
         {activeTab === 'listings' && <ListingPerformance />}
+
+        {activeTab === 'create-listing' && (
+          <CreateListingForm
+            onSuccess={() => {
+              toast.success('Listing created! Refreshing dashboard...')
+              loadStats()
+              setActiveTab('listings')
+            }}
+            onCancel={() => setActiveTab('listings')}
+          />
+        )}
       </div>
     </div>
   )
