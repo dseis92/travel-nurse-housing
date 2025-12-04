@@ -14,6 +14,7 @@ import { fetchListings } from './services/listingService'
 import { AuthModal } from './components/auth/AuthModal'
 import { NurseVerification } from './components/verification/NurseVerification'
 import { BookingRequestForm } from './components/booking/BookingRequestForm'
+import { MyBookings } from './components/booking/MyBookings'
 import { NurseOnboarding } from './components/onboarding/NurseOnboarding'
 import { HostOnboarding } from './components/onboarding/HostOnboarding'
 import Map from './components/Map'
@@ -115,7 +116,7 @@ const App: React.FC = () => {
 
   // Favorites + bottom tab state
   const [favorites, setFavorites] = useState<number[]>([])
-  const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'favorites'>(
+  const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'favorites' | 'bookings'>(
     'home',
   )
 
@@ -512,6 +513,11 @@ const App: React.FC = () => {
 
       <div className="nm-phone">
         <main className="nm-screen-content nm-fade-in">
+          {/* Show MyBookings view when bookings tab is active */}
+          {activeBottomTab === 'bookings' ? (
+            <MyBookings />
+          ) : (
+            <>
           {/* HEADER: search pill + category tabs */}
           <NeumoCard className="nm-explore-header">
             <button
@@ -1020,6 +1026,8 @@ const App: React.FC = () => {
               <HostDashboard />
             </NeumoCard>
           )}
+            </>
+          )}
         </main>
 
         <nav className="nm-bottom-nav">
@@ -1060,6 +1068,29 @@ const App: React.FC = () => {
             }}
           >
             💬
+          </button>
+          <button
+            className={
+              'nm-bottom-icon ' +
+              (activeBottomTab === 'bookings'
+                ? 'nm-bottom-icon--active'
+                : '')
+            }
+            type="button"
+            onClick={() => {
+              if (profile && profile.role === 'nurse') {
+                setActiveBottomTab('bookings')
+                setViewLayout('list')
+              } else if (profile && profile.role === 'host') {
+                toast('Hosts can view booking requests in the dashboard')
+              } else {
+                toast.error('Please sign in to view bookings')
+                setAuthModalMode('signin')
+                setShowAuthModal(true)
+              }
+            }}
+          >
+            📅
           </button>
           <button
             className={
