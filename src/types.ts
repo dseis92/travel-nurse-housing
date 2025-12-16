@@ -65,6 +65,7 @@ export type Listing = {
   pricePerMonth: number
   roomType: 'private-room' | 'entire-place' | 'shared'
   imageUrl: string
+  imageUrls?: string[] // Multiple photos for gallery (falls back to imageUrl if not provided)
   tags: string[]
   perks: string[]
   rating?: number

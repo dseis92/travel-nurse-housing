@@ -1,5 +1,5 @@
 import React from 'react'
-import './neumo.css'
+import './airbnb-theme.css'
 
 type NeumoCardProps = {
   children: React.ReactNode

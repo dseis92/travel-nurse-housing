@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airbnb-Style Preview - Nursery</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f7f7f7;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .phone-shell {
+      width: 390px;
+      height: 844px;
+      background: #ffffff;
+      border-radius: 40px;
+      padding: 20px;
+      box-shadow:
+        0 6px 16px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    .header {
+      text-align: center;
+      color: #222222;
+      padding: 12px 0;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(to right, #e61e4d, #d70466);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .search-bar {
+      background: #ffffff;
+      border: 1px solid #dddddd;
+      border-radius: 40px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.05);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .search-bar:hover {
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 8px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .search-icon {
+      font-size: 18px;
+      color: #222222;
+    }
+
+    .search-bar input {
+      background: none;
+      border: none;
+      outline: none;
+      color: #222222;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .search-bar input::placeholder {
+      color: #717171;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid #ebebeb;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-image {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, #ff385c, #e61e4d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+
+    .favorite-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .card-content {
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #222222;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: #717171;
+      margin-bottom: 8px;
+    }
+
+    .card-price {
+      font-size: 16px;
+      color: #222222;
+      margin-bottom: 12px;
+    }
+
+    .price-amount {
+      font-weight: 600;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      background: #f7f7f7;
+      border: 1px solid #dddddd;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #222222;
+      font-weight: 500;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .button {
+      flex: 1;
+      background: #ffffff;
+      border: 1px solid #222222;
+      color: #222222;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .button:hover {
+      background: #f7f7f7;
+    }
+
+    .button-primary {
+      background: linear-gradient(to right, #e61e4d 0%, #e31c5f 50%, #d70466 100%);
+      border: none;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(230, 30, 77, 0.3);
+    }
+
+    .button-primary:hover {
+      background: linear-gradient(to right, #d01346 0%, #cc1456 50%, #bd0459 100%);
+      box-shadow: 0 4px 12px rgba(230, 30, 77, 0.4);
+    }
+
+    .bottom-nav {
+      margin-top: auto;
+      background: #ffffff;
+      border-top: 1px solid #ebebeb;
+      border-radius: 0;
+      padding: 12px 0;
+      display: flex;
+      justify-content: space-around;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #717171;
+      font-size: 22px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .nav-item:hover {
+      background: #f7f7f7;
+    }
+
+    .nav-item.active {
+      color: #e61e4d;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .theme-label {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #222222;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      color: #222222;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-label">4️⃣ Airbnb Soft</div>
+
+  <div class="phone-shell">
+    <div class="header">
+      <h1>Nursery</h1>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search Minneapolis...">
+    </div>
+
+    <div class="card">
+      <div class="card-image">
+        🏠
+        <div class="favorite-badge">🤍</div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Cozy Studio in Whittier</div>
+        <div class="card-subtitle">
+          <span class="rating">⭐ 4.92</span> · 8 min to Abbott Northwestern
+        </div>
+        <div class="card-price">
+          <span class="price-amount">$2,400</span> / month
+        </div>
+        <div class="card-tags">
+          <span class="tag">Fast Wi-Fi</span>
+          <span class="tag">Parking</span>
+          <span class="tag">Pet-friendly</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-image">
+        🏢
+        <div class="favorite-badge">🤍</div>
+      </div>
+      <div class="card-content">
+        <div class="card-title">Modern Apartment Downtown</div>
+        <div class="card-subtitle">
+          <span class="rating">⭐ 4.88</span> · 12 min to HCMC
+        </div>
+        <div class="card-price">
+          <span class="price-amount">$2,600</span> / month
+        </div>
+        <div class="card-tags">
+          <span class="tag">Gym</span>
+          <span class="tag">Rooftop</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="button">Pass</button>
+      <button class="button button-primary">Like ❤️</button>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <span>🔥</span>
+        <span class="nav-label">Explore</span>
+      </div>
+      <div class="nav-item">
+        <span>❤️</span>
+        <span class="nav-label">Favorites</span>
+      </div>
+      <div class="nav-item">
+        <span>💬</span>
+        <span class="nav-label">Messages</span>
+      </div>
+      <div class="nav-item">
+        <span>👤</span>
+        <span class="nav-label">Profile</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

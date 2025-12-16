@@ -391,35 +391,8 @@ export function MyBookings() {
                   </div>
                 )}
 
-                {/* Host Response */}
-                {booking.host_response && (booking.status === 'accepted' || booking.status === 'declined') && (
-                  <div
-                    style={{
-                      padding: 10,
-                      borderRadius: 10,
-                      background: booking.status === 'accepted'
-                        ? 'rgba(16,185,129,0.05)'
-                        : 'rgba(239,68,68,0.05)',
-                      border: booking.status === 'accepted'
-                        ? '1px solid rgba(16,185,129,0.2)'
-                        : '1px solid rgba(239,68,68,0.2)',
-                    }}
-                  >
-                    <p className="nm-body" style={{ fontSize: 9, color: '#6b7280', marginBottom: 4 }}>
-                      Host Response:
-                    </p>
-                    <p className="nm-body" style={{
-                      fontSize: 11,
-                      color: booking.status === 'accepted' ? '#10b981' : '#ef4444'
-                    }}>
-                      "{booking.host_response}"
-                    </p>
-                  </div>
-                )}
-
-                {/* Status Messages (when no host response) */}
                 {/* Status Messages */}
-                {!booking.host_response && booking.status === 'accepted' && (
+                {booking.status === 'accepted' && (
                   <div
                     style={{
                       padding: 10,
@@ -434,7 +407,7 @@ export function MyBookings() {
                   </div>
                 )}
 
-                {!booking.host_response && booking.status === 'declined' && (
+                {booking.status === 'declined' && (
                   <div
                     style={{
                       padding: 10,
@@ -462,7 +435,7 @@ export function MyBookings() {
                   </div>
                 )}
 
-                {!booking.host_response && booking.status === 'accepted' && (
+                {booking.status === 'accepted' && (
                   <button
                     className="nm-gradient-button"
                     style={{ width: '100%', fontSize: 13 }}

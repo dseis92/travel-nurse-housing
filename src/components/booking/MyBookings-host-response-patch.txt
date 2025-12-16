@@ -1,0 +1,45 @@
+The host response display feature has been added to MyBookings but needs manual integration.
+
+After line 392 (after the hold expiration warning), add this code:
+
+```typescript
+                {/* Host Response */}
+                {booking.host_response && (booking.status === 'accepted' || booking.status === 'declined') && (
+                  <div
+                    style={{
+                      padding: 10,
+                      borderRadius: 10,
+                      background: booking.status === 'accepted'
+                        ? 'rgba(16,185,129,0.05)'
+                        : 'rgba(239,68,68,0.05)',
+                      border: booking.status === 'accepted'
+                        ? '1px solid rgba(16,185,129,0.2)'
+                        : '1px solid rgba(239,68,68,0.2)',
+                    }}
+                  >
+                    <p className="nm-body" style={{ fontSize: 9, color: '#6b7280', marginBottom: 4 }}>
+                      Host Response:
+                    </p>
+                    <p className="nm-body" style={{
+                      fontSize: 11,
+                      color: booking.status === 'accepted' ? '#10b981' : '#ef4444'
+                    }}>
+                      "{booking.host_response}"
+                    </p>
+                  </div>
+                )}
+```
+
+Then wrap the existing status messages (lines 394-423) with a check for !booking.host_response:
+
+Change line 395 from:
+  `{booking.status === 'accepted' && (`
+
+To:
+  `{!booking.host_response && booking.status === 'accepted' && (`
+
+And line 410 from:
+  `{booking.status === 'declined' && (`
+
+To:
+  `{!booking.host_response && booking.status === 'declined' && (`

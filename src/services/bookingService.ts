@@ -32,12 +32,84 @@ export interface CreateBookingData {
 
 export const bookingService = {
   /**
+   * Check if a listing is available for the requested dates
+   */
+  async checkAvailability(
+    listingId: number,
+    startDate: string,
+    endDate: string
+  ): Promise<{ available: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.rpc('check_booking_availability', {
+        p_listing_id: listingId,
+        p_start_date: startDate,
+        p_end_date: endDate,
+      });
+
+      if (error) throw error;
+
+      return { available: data };
+    } catch (error: any) {
+      console.error('Check availability error:', error);
+      return {
+        available: false,
+        error: error.message || 'Failed to check availability',
+      };
+    }
+  },
+
+  /**
+   * Get unavailable date ranges for a listing (accepted bookings + blocked dates)
+   */
+  async getUnavailableDates(listingId: number): Promise<{ startDate: string; endDate: string }[]> {
+    try {
+      // Get accepted bookings
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('start_date, end_date')
+        .eq('listing_id', listingId)
+        .eq('status', 'accepted');
+
+      // Get blocked availability periods
+      const { data: blocked } = await supabase
+        .from('listing_availability')
+        .select('start_date, end_date')
+        .eq('listing_id', listingId)
+        .eq('is_available', false);
+
+      const unavailable: { startDate: string; endDate: string }[] = [];
+
+      if (bookings) {
+        unavailable.push(...bookings.map(b => ({ startDate: b.start_date, endDate: b.end_date })));
+      }
+
+      if (blocked) {
+        unavailable.push(...blocked.map(b => ({ startDate: b.start_date, endDate: b.end_date })));
+      }
+
+      return unavailable;
+    } catch (error: any) {
+      console.error('Get unavailable dates error:', error);
+      return [];
+    }
+  },
+
+  /**
    * Create a new booking request
    */
   async createBooking(data: CreateBookingData): Promise<{ success: boolean; booking?: Booking; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Must be signed in to create a booking');
+
+      // Check availability first
+      const availabilityCheck = await this.checkAvailability(data.listingId, data.startDate, data.endDate);
+      if (!availabilityCheck.available) {
+        return {
+          success: false,
+          error: 'These dates are no longer available. Please choose different dates.',
+        };
+      }
 
       // Calculate total months and price
       const start = new Date(data.startDate);

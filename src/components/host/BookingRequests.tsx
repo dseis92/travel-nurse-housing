@@ -10,6 +10,8 @@ export function BookingRequests() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [respondingTo, setRespondingTo] = useState<{ id: string; action: 'accept' | 'decline' } | null>(null)
+  const [hostMessage, setHostMessage] = useState('')
 
   useEffect(() => {
     loadRequests()
@@ -34,8 +36,10 @@ export function BookingRequests() {
 
     try {
       setProcessingId(bookingId)
-      await hostAnalyticsService.acceptBooking(bookingId)
+      await hostAnalyticsService.acceptBooking(bookingId, hostMessage || undefined)
       toast.success('Booking accepted!')
+      setRespondingTo(null)
+      setHostMessage('')
       await loadRequests()
     } catch (error: any) {
       console.error('Error accepting booking:', error)
@@ -48,14 +52,12 @@ export function BookingRequests() {
   const handleDecline = async (bookingId: string) => {
     if (processingId) return
 
-    if (!confirm('Are you sure you want to decline this booking request?')) {
-      return
-    }
-
     try {
       setProcessingId(bookingId)
-      await hostAnalyticsService.declineBooking(bookingId)
+      await hostAnalyticsService.declineBooking(bookingId, hostMessage || undefined)
       toast.success('Booking declined')
+      setRespondingTo(null)
+      setHostMessage('')
       await loadRequests()
     } catch (error: any) {
       console.error('Error declining booking:', error)
@@ -63,6 +65,16 @@ export function BookingRequests() {
     } finally {
       setProcessingId(null)
     }
+  }
+
+  const startResponding = (bookingId: string, action: 'accept' | 'decline') => {
+    setRespondingTo({ id: bookingId, action })
+    setHostMessage('')
+  }
+
+  const cancelResponding = () => {
+    setRespondingTo(null)
+    setHostMessage('')
   }
 
   const formatDate = (dateString: string) => {
@@ -284,24 +296,108 @@ export function BookingRequests() {
                   </div>
                 )}
 
+                {/* Guest Message */}
+                {request.guestMessage && (
+                  <div
+                    style={{
+                      padding: 10,
+                      borderRadius: 8,
+                      background: 'rgba(99,102,241,0.05)',
+                      border: '1px solid rgba(99,102,241,0.15)',
+                    }}
+                  >
+                    <p className="nm-body" style={{ fontSize: 9, color: '#6b7280', marginBottom: 4 }}>
+                      Message from guest:
+                    </p>
+                    <p className="nm-body" style={{ fontSize: 11, color: '#1f2937' }}>
+                      "{request.guestMessage}"
+                    </p>
+                  </div>
+                )}
+
+                {/* Response Form */}
+                {respondingTo?.id === request.id && (
+                  <div
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      background: 'rgba(148,163,184,0.05)',
+                      border: '1px solid rgba(148,163,184,0.2)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    <p className="nm-heading-lg" style={{ fontSize: 11 }}>
+                      {respondingTo.action === 'accept' ? 'Add a message (optional)' : 'Reason for declining (optional)'}
+                    </p>
+                    <textarea
+                      value={hostMessage}
+                      onChange={(e) => setHostMessage(e.target.value)}
+                      placeholder={
+                        respondingTo.action === 'accept'
+                          ? 'e.g., Looking forward to hosting you!'
+                          : 'e.g., Unfortunately, those dates are no longer available.'
+                      }
+                      style={{
+                        width: '100%',
+                        minHeight: 60,
+                        padding: 10,
+                        borderRadius: 8,
+                        border: '1px solid rgba(148,163,184,0.3)',
+                        fontSize: 11,
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        background: '#fff',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        className="nm-pill"
+                        style={{ flex: 1, fontSize: 11 }}
+                        onClick={cancelResponding}
+                        disabled={processingId === request.id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="nm-pill nm-pill--active"
+                        style={{ flex: 2, fontSize: 11 }}
+                        onClick={() =>
+                          respondingTo.action === 'accept'
+                            ? handleAccept(request.id)
+                            : handleDecline(request.id)
+                        }
+                        disabled={processingId === request.id}
+                      >
+                        {processingId === request.id
+                          ? 'Processing...'
+                          : respondingTo.action === 'accept'
+                          ? 'Confirm Accept'
+                          : 'Confirm Decline'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
-                {request.status === 'pending' && (
+                {request.status === 'pending' && !respondingTo && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       className="nm-pill"
                       style={{ flex: 1, fontSize: 11, color: '#ef4444' }}
-                      onClick={() => handleDecline(request.id)}
+                      onClick={() => startResponding(request.id, 'decline')}
                       disabled={processingId === request.id}
                     >
-                      {processingId === request.id ? 'Processing...' : 'Decline'}
+                      Decline
                     </button>
                     <button
                       className="nm-pill nm-pill--active"
                       style={{ flex: 2, fontSize: 11 }}
-                      onClick={() => handleAccept(request.id)}
+                      onClick={() => startResponding(request.id, 'accept')}
                       disabled={processingId === request.id}
                     >
-                      {processingId === request.id ? 'Processing...' : 'Accept Booking'}
+                      Accept Booking
                     </button>
                   </div>
                 )}

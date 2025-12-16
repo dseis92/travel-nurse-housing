@@ -20,6 +20,13 @@ export const demoListings: Listing[] = [
     roomType: 'entire-place',
     imageUrl:
       'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
+    imageUrls: [
+      'https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg',
+      'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
+      'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg',
+      'https://images.pexels.com/photos/1648776/pexels-photo-1648776.jpeg',
+      'https://images.pexels.com/photos/2062426/pexels-photo-2062426.jpeg',
+    ],
     tags: ['Guest favorite', '2 nights min', 'Self check-in'],
     perks: ['Fast Wi-Fi', 'Free parking'],
     rating: 4.92,
@@ -43,6 +50,12 @@ export const demoListings: Listing[] = [
     roomType: 'entire-place',
     imageUrl:
       'https://images.pexels.com/photos/1396125/pexels-photo-1396125.jpeg',
+    imageUrls: [
+      'https://images.pexels.com/photos/1396125/pexels-photo-1396125.jpeg',
+      'https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg',
+      'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg',
+      'https://images.pexels.com/photos/1080721/pexels-photo-1080721.jpeg',
+    ],
     tags: ['Bright & modern', 'Dedicated workspace'],
     perks: ['Washer / dryer'],
     rating: 4.76,
@@ -66,6 +79,11 @@ export const demoListings: Listing[] = [
     roomType: 'entire-place',
     imageUrl:
       'https://images.pexels.com/photos/259580/pexels-photo-259580.jpeg',
+    imageUrls: [
+      'https://images.pexels.com/photos/259580/pexels-photo-259580.jpeg',
+      'https://images.pexels.com/photos/1612351/pexels-photo-1612351.jpeg',
+      'https://images.pexels.com/photos/2119714/pexels-photo-2119714.jpeg',
+    ],
     tags: ['Near light rail', 'Private balcony'],
     perks: ['Garage parking'],
     rating: 4.88,

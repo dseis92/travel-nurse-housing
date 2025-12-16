@@ -27,12 +27,15 @@ export interface BookingRequest {
   guestId: string
   guestName: string
   guestAvatarUrl?: string
+  guestMessage?: string
   startDate: string
   endDate: string
   totalPrice: number
   status: 'pending' | 'accepted' | 'declined' | 'cancelled'
   createdAt: string
   holdExpiresAt?: string
+  hostResponse?: string
+  respondedAt?: string
 }
 
 export interface DashboardStats {
@@ -254,7 +257,10 @@ export const hostAnalyticsService = {
         total_price,
         status,
         created_at,
-        hold_expires_at
+        hold_expires_at,
+        guest_message,
+        host_response,
+        responded_at
       `)
       .in('listing_id', listings.map(l => l.id))
       .order('created_at', { ascending: false })
@@ -286,12 +292,15 @@ export const hostAnalyticsService = {
         guestId: booking.guest_id,
         guestName: profile?.name || 'Guest',
         guestAvatarUrl: profile?.avatar_url,
+        guestMessage: booking.guest_message,
         startDate: booking.start_date,
         endDate: booking.end_date,
         totalPrice: booking.total_price || 0,
         status: booking.status as BookingRequest['status'],
         createdAt: booking.created_at,
         holdExpiresAt: booking.hold_expires_at,
+        hostResponse: booking.host_response,
+        respondedAt: booking.responded_at,
       }
     })
   },
@@ -299,7 +308,7 @@ export const hostAnalyticsService = {
   /**
    * Accept a booking request
    */
-  async acceptBooking(bookingId: string): Promise<void> {
+  async acceptBooking(bookingId: string, hostResponse?: string): Promise<void> {
     // Get booking details
     const { data: booking } = await supabase
       .from('bookings')
@@ -309,10 +318,15 @@ export const hostAnalyticsService = {
 
     if (!booking) throw new Error('Booking not found')
 
-    // Update booking status
+    // Update booking status with optional host response
+    const updateData: any = { status: 'accepted' }
+    if (hostResponse) {
+      updateData.host_response = hostResponse
+    }
+
     const { error } = await supabase
       .from('bookings')
-      .update({ status: 'accepted' })
+      .update(updateData)
       .eq('id', bookingId)
 
     if (error) throw error
@@ -349,10 +363,15 @@ export const hostAnalyticsService = {
   /**
    * Decline a booking request
    */
-  async declineBooking(bookingId: string): Promise<void> {
+  async declineBooking(bookingId: string, hostResponse?: string): Promise<void> {
+    const updateData: any = { status: 'declined' }
+    if (hostResponse) {
+      updateData.host_response = hostResponse
+    }
+
     const { error } = await supabase
       .from('bookings')
-      .update({ status: 'declined' })
+      .update(updateData)
       .eq('id', bookingId)
 
     if (error) throw error

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { OnboardingFlow } from './onboarding/OnboardingFlow'
 import { NeumoCard } from './neumo/NeumoKit'
-import { HostDashboard } from './HostDashboard'
 import { SearchFlow, type SearchFlowResult } from './search/SearchFlow'
 import { demoListings } from './data/demoListings'
 import { type Listing } from './types'
@@ -15,10 +14,14 @@ import { AuthModal } from './components/auth/AuthModal'
 import { NurseVerification } from './components/verification/NurseVerification'
 import { BookingRequestForm } from './components/booking/BookingRequestForm'
 import { MyBookings } from './components/booking/MyBookings'
+import { BookingRequests } from './components/host/BookingRequests'
+import { HostDashboard } from './components/host/HostDashboard'
 import { NurseOnboarding } from './components/onboarding/NurseOnboarding'
 import { HostOnboarding } from './components/onboarding/HostOnboarding'
 import Map from './components/Map'
 import { HospitalsView } from './components/HospitalsView'
+import { SwipeView } from './components/SwipeView'
+import { AirbnbLayout } from './components/AirbnbLayout'
 import { demoHospitals } from './data/demoHospitals'
 import {
   sortByMatchScore,
@@ -123,8 +126,11 @@ const App: React.FC = () => {
   // Messaging state
   const [showMessaging, setShowMessaging] = useState(false)
 
-  // NEW: list vs map layout for the feed
-  const [viewLayout, setViewLayout] = useState<'list' | 'map'>('list')
+  // NEW: list vs map vs swipe layout for the feed
+  const [viewLayout, setViewLayout] = useState<'list' | 'map' | 'swipe'>('swipe')
+
+  // Airbnb layout tab state
+  const [activeAirbnbTab, setActiveAirbnbTab] = useState<'explore' | 'favorites' | 'messages' | 'profile'>('explore')
 
   // Match quality filter
   const [matchFilter, setMatchFilter] = useState<'all' | 'perfect' | 'great'>('all')
@@ -512,14 +518,35 @@ const App: React.FC = () => {
         )}
 
       <div className="nm-phone">
+        {viewLayout === 'swipe' && activeCategory === 'housing' && viewMode === 'nurse' ? (
+          // AIRBNB SWIPE VIEW (full screen with own navigation)
+          <AirbnbLayout
+            listings={displayedListings}
+            favorites={new Set(favorites)}
+            onToggleFavorite={handleToggleFavorite}
+            onViewDetails={(listing) => setSelectedListing(listing)}
+            activeTab={activeAirbnbTab}
+            onTabChange={setActiveAirbnbTab}
+          />
+        ) : (
+        <>
         <main className="nm-screen-content nm-fade-in">
-          {/* Show MyBookings view when bookings tab is active */}
+          {/* Show Bookings view when bookings tab is active (role-aware) */}
           {activeBottomTab === 'bookings' ? (
-            <MyBookings />
+            profile?.role === 'host' ? (
+              <div style={{ padding: 16, paddingBottom: 80, maxWidth: 600, margin: '0 auto' }}>
+                <h1 className="nm-heading-lg" style={{ fontSize: 22, marginBottom: 20 }}>
+                  Booking Requests
+                </h1>
+                <BookingRequests />
+              </div>
+            ) : (
+              <MyBookings />
+            )
           ) : (
             <>
-          {/* HEADER: search pill + category tabs */}
-          <NeumoCard className="nm-explore-header">
+          {/* HEADER: search pill + category tabs (always visible) */}
+          <NeumoCard className="nm-explore-header" style={{ position: 'sticky', top: 0, zIndex: 50, marginBottom: 12 }}>
             <button
               type="button"
               className="nm-search-pill"
@@ -703,8 +730,8 @@ const App: React.FC = () => {
                       marginBottom: 8,
                     }}
                   >
-                    {/* Match quality filter (only show when matches exist) */}
-                    {displayedListings.some((l) => l.matchScore) && (
+                    {/* Match quality filter (show when user has preferences set) */}
+                    {(userPreferences.location || userPreferences.maxBudget) && (
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           type="button"
@@ -757,6 +784,20 @@ const App: React.FC = () => {
                       <button
                         type="button"
                         className={
+                          'nm-pill ' + (viewLayout === 'swipe' ? 'nm-pill--active' : '')
+                        }
+                        style={{
+                          fontSize: 11,
+                          paddingInline: 12,
+                          paddingBlock: 6,
+                        }}
+                        onClick={() => setViewLayout('swipe')}
+                      >
+                        🔥 Swipe
+                      </button>
+                      <button
+                        type="button"
+                        className={
                           'nm-pill ' + (viewLayout === 'list' ? 'nm-pill--active' : '')
                         }
                         style={{
@@ -799,7 +840,17 @@ const App: React.FC = () => {
                       </NeumoCard>
                     )}
 
-                  {viewLayout === 'list' ? (
+                  {viewLayout === 'swipe' ? (
+                    // SWIPE VIEW (Tinder-style)
+                    <SwipeView
+                      listings={displayedListings}
+                      favorites={new Set(favorites)}
+                      onToggleFavorite={handleToggleFavorite}
+                      onViewDetails={(listing) => {
+                        setSelectedListing(listing)
+                      }}
+                    />
+                  ) : viewLayout === 'list' ? (
                     // Original LIST VIEW (unchanged)
                     <>
                       {/* Top Matches Section */}
@@ -1078,11 +1129,9 @@ const App: React.FC = () => {
             }
             type="button"
             onClick={() => {
-              if (profile && profile.role === 'nurse') {
+              if (profile) {
                 setActiveBottomTab('bookings')
                 setViewLayout('list')
-              } else if (profile && profile.role === 'host') {
-                toast('Hosts can view booking requests in the dashboard')
               } else {
                 toast.error('Please sign in to view bookings')
                 setAuthModalMode('signin')
@@ -1122,6 +1171,8 @@ const App: React.FC = () => {
             {profile ? '👋' : '👤'}
           </button>
         </nav>
+        </>
+        )}
       </div>
     </div>
     </>
